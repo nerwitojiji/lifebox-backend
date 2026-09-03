@@ -173,3 +173,4 @@ dos repos.
 | 2026-09-03 | `feature/crear-curso` | Identificar la bitácora por asunto en vez de hash | Un archivo no puede contener su propio hash; `--amend` lo invalidaba |
 | 2026-09-03 | `dev` | Merge de feature/crear-curso (`--no-ff`) | SPEC-001 cerrado en el backend; suite en verde tras el merge (11/11) |
 | 2026-09-03 | `dev` | Documentar los supuestos de SPEC-001 | `SUPUESTOS.md`: transversales (org server-side, soft-delete, sin paginación) y los del crear curso |
+| 2026-09-03 | `feature/crear-colaborador` | Incorporar SPEC-002 (crear colaborador) al repositorio | El spec SDD pasa a `docs/specs/`; resuelve la contraseña inicial (generada por el servidor, entregada una sola vez) |
