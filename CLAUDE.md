@@ -127,7 +127,8 @@ Pendiente (gap contra el front):
 
 | Método | Ruta | Notas |
 |---|---|---|
-| POST | `/collaborator/` | idem en `collaborator_views.py`; definir cómo se setea la contraseña inicial y **documentarlo en `SUPUESTOS.md`** |
+| POST | `/collaborator/` | SPEC-002 aprobada (`docs/specs/`); `temporary_password` solo en el `201`, nunca recuperable |
+| POST | `/collaborator/{id}/reset-password/` | SPEC-002; regenera la contraseña temporal (invalida la anterior), sin body |
 | POST | `/course/{id}/assign/` | crea `CourseCollaborator`; validar que curso y colaborador sean del mismo tenant |
 | GET | `/course/{id}/collaborators/` | inscritos de un curso |
 | GET | `/course/enrollments/` | panel: por curso `full_name`, `version` y cantidad de inscritos, resuelto con `annotate(Count(...))` en un solo queryset — no contar en Python |
@@ -177,3 +178,4 @@ dos repos.
 | 2026-09-03 | `feature/crear-colaborador` | Agregar tests de creación de colaborador (SPEC-002) | CA-1..CA-12 como `APITestCase`; rojo (12 de 14 fallan con 405, CA-9 y CA-10 ya pasaban) |
 | 2026-09-03 | `feature/crear-colaborador` | Permitir al admin crear colaboradores vía POST /collaborator/ | `ListCreateAPIView` + serializer de escritura; contraseña generada, hasheada y devuelta una sola vez; verde 25/25 |
 | 2026-09-03 | `feature/crear-colaborador` | Revertir SPEC-002 (crear colaborador) | Se deshacen los tres commits de arriba: spec, tests y vista vuelven al estado de `dev`, `POST /collaborator/` queda otra vez pendiente. Las filas se conservan porque los commits siguen en el historial de la rama |
+| 2026-09-03 | `feature/crear-colaborador` | Incorporar SPEC-002 (crear colaborador) al repositorio — v2 | Rediseño tras el revert: contraseña temporal mostrada una sola vez al crear, sin cifrado ni almacenamiento recuperable; el admin la **regenera** (no la vuelve a ver) vía `POST /collaborator/{id}/reset-password/` |
