@@ -121,12 +121,12 @@ Ya implementado:
 | GET | `/user/me/` | token |
 | GET | `/course/` | `IsAdmin` |
 | GET | `/collaborator/` | `IsAdmin` |
+| POST | `/course/` | `IsAdmin` — SPEC-001; organización derivada del servidor |
 
 Pendiente (gap contra el front):
 
 | Método | Ruta | Notas |
 |---|---|---|
-| POST | `/course/` | mismo path que el GET → una sola vista `ListCreateAPIView` |
 | POST | `/collaborator/` | idem en `collaborator_views.py`; definir cómo se setea la contraseña inicial y **documentarlo en `SUPUESTOS.md`** |
 | POST | `/course/{id}/assign/` | crea `CourseCollaborator`; validar que curso y colaborador sean del mismo tenant |
 | GET | `/course/{id}/collaborators/` | inscritos de un curso |
@@ -164,4 +164,5 @@ dos repos.
 | 2026-09-02 | `dev` | `0b69079` y anteriores | Base entregada por Lifebox: scaffolding Django/DRF/Knox, modelos, login + listados de admin, seeder, tests de auth, README |
 | 2026-09-03 | `dev` | `c0ca8d9` | Agregar esta guía de contexto (comandos, arquitectura, convenciones, bitácora) |
 | 2026-09-03 | `feature/crear-curso` | `ee4951f` | Incorporar SPEC-001 (crear curso) a `docs/specs/` |
-| 2026-09-03 | `feature/crear-curso` | *(este commit)* | Tests de creación de curso (CA-1..CA-8), en rojo |
+| 2026-09-03 | `feature/crear-curso` | `2e4cacb` | Tests de creación de curso (CA-1..CA-8), en rojo |
+| 2026-09-03 | `feature/crear-curso` | `ca9719c` | `POST /course/`: `ListCreateAPIView` + serializer de escritura; suite en verde (11/11) |
