@@ -171,3 +171,4 @@ dos repos.
 | 2026-09-03 | `feature/crear-curso` | Agregar tests de creación de curso (SPEC-001) | CA-1..CA-8 como `APITestCase`; rojo (6 fallan con 405, CA-4 y CA-5 ya pasaban) |
 | 2026-09-03 | `feature/crear-curso` | Permitir al admin crear cursos vía POST /course/ | `ListCreateAPIView` + serializer de escritura, organización server-side; verde 11/11 |
 | 2026-09-03 | `feature/crear-curso` | Identificar la bitácora por asunto en vez de hash | Un archivo no puede contener su propio hash; `--amend` lo invalidaba |
+| 2026-09-03 | `dev` | Merge de feature/crear-curso (`--no-ff`) | SPEC-001 cerrado en el backend; suite en verde tras el merge (11/11) |
