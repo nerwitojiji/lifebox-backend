@@ -1,7 +1,7 @@
 from django.urls import path
 
-from apps.course.views import CourseListView
+from apps.course.views import CourseListCreateView
 
 urlpatterns = [
-    path("", CourseListView.as_view(), name="course-list"),
+    path("", CourseListCreateView.as_view(), name="course-list"),
 ]
