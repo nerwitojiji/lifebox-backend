@@ -127,7 +127,8 @@ Pendiente (gap contra el front):
 
 | Método | Ruta | Notas |
 |---|---|---|
-| POST | `/collaborator/` | idem en `collaborator_views.py`; definir cómo se setea la contraseña inicial y **documentarlo en `SUPUESTOS.md`** |
+| POST | `/collaborator/` | SPEC-002 aprobada (`docs/specs/`); `temporary_password` solo en el `201`, nunca recuperable |
+| POST | `/collaborator/{id}/reset-password/` | SPEC-002; regenera la contraseña temporal (invalida la anterior), sin body |
 | POST | `/course/{id}/assign/` | crea `CourseCollaborator`; validar que curso y colaborador sean del mismo tenant |
 | GET | `/course/{id}/collaborators/` | inscritos de un curso |
 | GET | `/course/enrollments/` | panel: por curso `full_name`, `version` y cantidad de inscritos, resuelto con `annotate(Count(...))` en un solo queryset — no contar en Python |
@@ -173,3 +174,10 @@ dos repos.
 | 2026-09-03 | `feature/crear-curso` | Identificar la bitácora por asunto en vez de hash | Un archivo no puede contener su propio hash; `--amend` lo invalidaba |
 | 2026-09-03 | `dev` | Merge de feature/crear-curso (`--no-ff`) | SPEC-001 cerrado en el backend; suite en verde tras el merge (11/11) |
 | 2026-09-03 | `dev` | Documentar los supuestos de SPEC-001 | `SUPUESTOS.md`: transversales (org server-side, soft-delete, sin paginación) y los del crear curso |
+| 2026-09-03 | `feature/crear-colaborador` | Incorporar SPEC-002 (crear colaborador) al repositorio | El spec SDD pasa a `docs/specs/`; resuelve la contraseña inicial (generada por el servidor, entregada una sola vez) |
+| 2026-09-03 | `feature/crear-colaborador` | Agregar tests de creación de colaborador (SPEC-002) | CA-1..CA-12 como `APITestCase`; rojo (12 de 14 fallan con 405, CA-9 y CA-10 ya pasaban) |
+| 2026-09-03 | `feature/crear-colaborador` | Permitir al admin crear colaboradores vía POST /collaborator/ | `ListCreateAPIView` + serializer de escritura; contraseña generada, hasheada y devuelta una sola vez; verde 25/25 |
+| 2026-09-03 | `feature/crear-colaborador` | Revertir SPEC-002 (crear colaborador) | Se deshacen los tres commits de arriba: spec, tests y vista vuelven al estado de `dev`, `POST /collaborator/` queda otra vez pendiente. Las filas se conservan porque los commits siguen en el historial de la rama |
+| 2026-09-03 | `feature/crear-colaborador` | Incorporar SPEC-002 (crear colaborador) al repositorio — v2 | Rediseño tras el revert: contraseña temporal mostrada una sola vez al crear, sin cifrado ni almacenamiento recuperable; el admin la **regenera** (no la vuelve a ver) vía `POST /collaborator/{id}/reset-password/` |
+| 2026-09-03 | `feature/crear-colaborador` | Agregar tests de creación y regeneración de colaborador (SPEC-002 v2) | 23 tests cubren CA-1..CA-20, apellido opcional, aleatoriedad y atomicidad; rojo esperado: creación `405` y ruta de regeneración inexistente |
+| 2026-09-03 | `feature/crear-colaborador` | Permitir crear colaboradores y regenerar su contraseña temporal | `ListCreateAPIView` + endpoint de regeneración, tenant server-side, creación atómica y contraseña solo hasheada; suite verde 34/34, sin migraciones |

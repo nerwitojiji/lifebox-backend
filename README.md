@@ -102,7 +102,10 @@ Base de datos: SQLite por defecto (`db.sqlite3`, se crea al migrar). No es oblig
 | POST | `/user/verify-token/` | Token | Verifica sesión |
 | GET | `/user/me/` | Token | Usuario actual |
 | GET | `/course/` | Admin | Lista cursos de la organización |
+| POST | `/course/` | Admin | Crea un curso en la organización |
 | GET | `/collaborator/` | Admin | Lista colaboradores de la organización |
+| POST | `/collaborator/` | Admin | Crea un colaborador y entrega su contraseña temporal una vez |
+| POST | `/collaborator/{id}/reset-password/` | Admin | Regenera la contraseña temporal del colaborador |
 
 Header de autenticación: `Authorization: Token <token>`
 

@@ -61,7 +61,28 @@ ambos verbos a `/course/`, y separar habría duplicado el permiso y el filtro po
 organización. El serializer de escritura sí es una clase aparte, para que la
 creación no acepte campos que solo tienen sentido al leer.
 
-## Pendientes
+## SPEC-002 — Crear colaborador
 
-**Contraseña inicial del colaborador.** El enunciado pide documentar cómo se
-maneja. Se resuelve en SPEC-002 (crear colaborador) y baja acá al cerrarse.
+**La contraseña temporal la genera el servidor y se muestra una sola vez.** El
+admin no elige la contraseña: recibe `temporary_password` únicamente en el `201`
+de creación. En la base solo queda el hash producido por `set_password`; el valor
+en claro no se cifra, guarda ni puede recuperarse después.
+
+**Una contraseña perdida se regenera, no se revela.** El admin puede llamar
+`POST /collaborator/{id}/reset-password/`. La respuesta muestra una nueva
+contraseña una sola vez y el hash anterior se reemplaza inmediatamente. El
+queryset del endpoint está limitado a la organización del admin y a perfiles con
+`show=True`; un colaborador de otro tenant se comporta como inexistente (`404`).
+
+**La contraseña tiene 12 caracteres sin símbolos ambiguos.** Se genera con
+`django.utils.crypto.get_random_string` y un alfabeto que excluye `0/O` y
+`1/l/I`. Esto facilita copiarla o dictarla sin introducir una dependencia ni
+reducirla a una constante predecible.
+
+**No se fuerza cambio en el primer login ni se envía correo.** El colaborador
+puede entrar inmediatamente con la contraseña temporal vigente. Obligar a
+cambiarla y entregar credenciales por email pertenecen a features posteriores.
+
+**El correo es único en todo el sistema.** `User.email` ya tiene `unique=True`,
+por lo que tampoco se reutiliza un correo de otro tenant o de un perfil dado de
+baja. La reactivación queda fuera de SPEC-002.
