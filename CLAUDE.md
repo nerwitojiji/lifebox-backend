@@ -182,3 +182,7 @@ dos repos.
 | 2026-09-03 | `feature/crear-colaborador` | Agregar tests de creación y regeneración de colaborador (SPEC-002 v2) | 23 tests cubren CA-1..CA-20, apellido opcional, aleatoriedad y atomicidad; rojo esperado: creación `405` y ruta de regeneración inexistente |
 | 2026-09-03 | `feature/crear-colaborador` | Permitir crear colaboradores y regenerar su contraseña temporal | `ListCreateAPIView` + endpoint de regeneración, tenant server-side, creación atómica y contraseña solo hasheada; suite verde 34/34, sin migraciones |
 | 2026-09-03 | `dev` | Merge de feature/crear-colaborador (`--no-ff`) | SPEC-002 cerrada en el backend; suite completa verde 34/34 |
+| 2026-09-03 | `feature/asignar-curso` | Incorporar SPEC-003 (asignar curso) al repositorio | Define asignación individual, tenant server-side, duplicados, estados no disponibles y contrato de UI; propuestas aprobadas |
+| 2026-09-03 | `feature/asignar-curso` | Agregar tests de asignación de cursos (SPEC-003) | Cobertura estricta de contrato, permisos, tenant, estados, entrada hostil y duplicados visibles/ocultos; rojo esperado por ruta inexistente |
+| 2026-09-03 | `feature/asignar-curso` | Permitir asignar cursos a colaboradores vía POST | Endpoint tenant-safe, recursos activos/visibles, duplicados controlados y respuesta anidada; suite completa verde 50/50 |
+| 2026-09-03 | `dev` | Merge de feature/asignar-curso (`--no-ff`) | SPEC-003 cerrada en backend; 16 tests específicos y suite completa verde 50/50 |

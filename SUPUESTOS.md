@@ -86,3 +86,23 @@ cambiarla y entregar credenciales por email pertenecen a features posteriores.
 **El correo es único en todo el sistema.** `User.email` ya tiene `unique=True`,
 por lo que tampoco se reutiliza un correo de otro tenant o de un perfil dado de
 baja. La reactivación queda fuera de SPEC-002.
+
+## SPEC-003 — Asignar curso
+
+**La asignación es individual.** `POST /course/{id}/assign/` recibe un único
+`collaborator_id`. Una operación por inscripción mantiene errores precisos y
+evita introducir semántica parcial para lotes dentro del flujo core.
+
+**Solo se asignan recursos disponibles.** El curso debe estar visible y activo;
+el perfil colaborador y su usuario deben estar visibles, y el usuario activo. Un
+recurso inexistente, no disponible o ajeno al tenant responde `404` para no filtrar
+su existencia.
+
+**Los duplicados son error y no reactivan.** Si el par curso-colaborador ya existe,
+incluso con `show=False`, la API responde `400` bajo `collaborator_id`. Reactivar
+una inscripción es una corrección explícita fuera de SPEC-003. La validación previa
+mejora el mensaje y la restricción única sigue protegiendo carreras concurrentes.
+
+**La respuesta contiene un resumen anidado.** El `201` incluye la inscripción,
+el nombre/versión del curso y el nombre/correo del colaborador. Así el cliente puede
+confirmar la operación sin otra consulta y sin exponer objetos completos.
