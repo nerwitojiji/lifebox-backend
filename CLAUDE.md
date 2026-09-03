@@ -155,14 +155,19 @@ equivocado** y el **aislamiento entre organizaciones** (un tenant no ve lo del o
 cambios (el archivo va dentro del commit que describe). Formato: fila nueva al
 final, más reciente abajo.
 
+Las filas se identifican por **asunto del commit, no por hash**: el archivo viaja
+dentro del commit que describe, así que no puede contener su propio hash (y un
+`--amend` lo invalidaría). El hash se obtiene con `git log`.
+
 Después de actualizar esta tabla, **replicar la línea** en la bitácora consolidada
 de `Proyecto Entrevista/.claude/CLAUDE.md` — el archivo padre es el índice de los
 dos repos.
 
 | Fecha | Rama | Commit | Qué cambió |
 |---|---|---|---|
-| 2026-09-02 | `dev` | `0b69079` y anteriores | Base entregada por Lifebox: scaffolding Django/DRF/Knox, modelos, login + listados de admin, seeder, tests de auth, README |
-| 2026-09-03 | `dev` | `c0ca8d9` | Agregar esta guía de contexto (comandos, arquitectura, convenciones, bitácora) |
-| 2026-09-03 | `feature/crear-curso` | `ee4951f` | Incorporar SPEC-001 (crear curso) a `docs/specs/` |
-| 2026-09-03 | `feature/crear-curso` | `2e4cacb` | Tests de creación de curso (CA-1..CA-8), en rojo |
-| 2026-09-03 | `feature/crear-curso` | `ca9719c` | `POST /course/`: `ListCreateAPIView` + serializer de escritura; suite en verde (11/11) |
+| 2026-09-02 | `dev` | *(base de Lifebox)* | Scaffolding Django/DRF/Knox, modelos, login + listados de admin, seeder, tests de auth, README |
+| 2026-09-03 | `dev` | Agregar guía de contexto de Claude Code para el repo | Comandos, arquitectura, convenciones y esta bitácora |
+| 2026-09-03 | `feature/crear-curso` | Incorporar SPEC-001 (crear curso) al repositorio | El spec SDD pasa a `docs/specs/`, versionado junto al código que especifica |
+| 2026-09-03 | `feature/crear-curso` | Agregar tests de creación de curso (SPEC-001) | CA-1..CA-8 como `APITestCase`; rojo (6 fallan con 405, CA-4 y CA-5 ya pasaban) |
+| 2026-09-03 | `feature/crear-curso` | Permitir al admin crear cursos vía POST /course/ | `ListCreateAPIView` + serializer de escritura, organización server-side; verde 11/11 |
+| 2026-09-03 | `feature/crear-curso` | Identificar la bitácora por asunto en vez de hash | Un archivo no puede contener su propio hash; `--amend` lo invalidaba |
