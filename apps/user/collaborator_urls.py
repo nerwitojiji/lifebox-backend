@@ -1,7 +1,7 @@
 from django.urls import path
 
-from apps.user.collaborator_views import CollaboratorListCreateView
+from apps.user.collaborator_views import CollaboratorListView
 
 urlpatterns = [
-    path("", CollaboratorListCreateView.as_view(), name="collaborator-list"),
+    path("", CollaboratorListView.as_view(), name="collaborator-list"),
 ]
