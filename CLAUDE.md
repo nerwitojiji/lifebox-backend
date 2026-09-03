@@ -122,13 +122,13 @@ Ya implementado:
 | GET | `/course/` | `IsAdmin` |
 | GET | `/collaborator/` | `IsAdmin` |
 | POST | `/course/` | `IsAdmin` — SPEC-001; organización derivada del servidor |
+| POST | `/collaborator/` | `IsAdmin` — SPEC-002; crea `User` + `Collaborator` atómicamente y entrega `temporary_password` solo en el `201` |
+| POST | `/collaborator/{id}/reset-password/` | `IsAdmin` — SPEC-002; regenera la contraseña temporal dentro del tenant, sin body |
 
 Pendiente (gap contra el front):
 
 | Método | Ruta | Notas |
 |---|---|---|
-| POST | `/collaborator/` | SPEC-002 aprobada (`docs/specs/`); `temporary_password` solo en el `201`, nunca recuperable |
-| POST | `/collaborator/{id}/reset-password/` | SPEC-002; regenera la contraseña temporal (invalida la anterior), sin body |
 | POST | `/course/{id}/assign/` | crea `CourseCollaborator`; validar que curso y colaborador sean del mismo tenant |
 | GET | `/course/{id}/collaborators/` | inscritos de un curso |
 | GET | `/course/enrollments/` | panel: por curso `full_name`, `version` y cantidad de inscritos, resuelto con `annotate(Count(...))` en un solo queryset — no contar en Python |
@@ -181,3 +181,4 @@ dos repos.
 | 2026-09-03 | `feature/crear-colaborador` | Incorporar SPEC-002 (crear colaborador) al repositorio — v2 | Rediseño tras el revert: contraseña temporal mostrada una sola vez al crear, sin cifrado ni almacenamiento recuperable; el admin la **regenera** (no la vuelve a ver) vía `POST /collaborator/{id}/reset-password/` |
 | 2026-09-03 | `feature/crear-colaborador` | Agregar tests de creación y regeneración de colaborador (SPEC-002 v2) | 23 tests cubren CA-1..CA-20, apellido opcional, aleatoriedad y atomicidad; rojo esperado: creación `405` y ruta de regeneración inexistente |
 | 2026-09-03 | `feature/crear-colaborador` | Permitir crear colaboradores y regenerar su contraseña temporal | `ListCreateAPIView` + endpoint de regeneración, tenant server-side, creación atómica y contraseña solo hasheada; suite verde 34/34, sin migraciones |
+| 2026-09-03 | `dev` | Merge de feature/crear-colaborador (`--no-ff`) | SPEC-002 cerrada en el backend; suite completa verde 34/34 |
