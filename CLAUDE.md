@@ -163,4 +163,5 @@ dos repos.
 |---|---|---|---|
 | 2026-09-02 | `dev` | `0b69079` y anteriores | Base entregada por Lifebox: scaffolding Django/DRF/Knox, modelos, login + listados de admin, seeder, tests de auth, README |
 | 2026-09-03 | `dev` | `c0ca8d9` | Agregar esta guía de contexto (comandos, arquitectura, convenciones, bitácora) |
-| 2026-09-03 | `feature/crear-curso` | *(este commit)* | Incorporar SPEC-001 (crear curso) a `docs/specs/` |
+| 2026-09-03 | `feature/crear-curso` | `ee4951f` | Incorporar SPEC-001 (crear curso) a `docs/specs/` |
+| 2026-09-03 | `feature/crear-curso` | *(este commit)* | Tests de creación de curso (CA-1..CA-8), en rojo |
