@@ -183,3 +183,4 @@ dos repos.
 | 2026-09-03 | `feature/crear-colaborador` | Permitir crear colaboradores y regenerar su contraseña temporal | `ListCreateAPIView` + endpoint de regeneración, tenant server-side, creación atómica y contraseña solo hasheada; suite verde 34/34, sin migraciones |
 | 2026-09-03 | `dev` | Merge de feature/crear-colaborador (`--no-ff`) | SPEC-002 cerrada en el backend; suite completa verde 34/34 |
 | 2026-09-03 | `feature/asignar-curso` | Incorporar SPEC-003 (asignar curso) al repositorio | Define asignación individual, tenant server-side, duplicados, estados no disponibles y contrato de UI; propuestas aprobadas |
+| 2026-09-03 | `feature/asignar-curso` | Agregar tests de asignación de cursos (SPEC-003) | Cobertura estricta de contrato, permisos, tenant, estados, entrada hostil y duplicados visibles/ocultos; rojo esperado por ruta inexistente |
