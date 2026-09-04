@@ -2,8 +2,13 @@
 
 - **Capacidad:** Gestión de asignaciones del administrador
 - **Feature:** Asignar curso · rama `feature/asignar-curso`
-- **Estado:** Aprobada
+- **Estado:** Aprobada · **PA-1 superseded por SPEC-005**
 - **Repos:** `lifebox-backend` (endpoint) · `lifebox-frontend` (interfaz)
+
+> **Nota (SPEC-005):** la asignación ya **no** se hace desde la pantalla de cursos
+> sino desde el panel de inscripciones. Solo cambia quién llama al endpoint: el
+> contrato de `POST /course/{id}/assign/` y sus reglas RN-1 a RN-8 siguen vigentes
+> tal cual.
 
 > Vocabulario normativo (RFC 2119): **DEBE / NO DEBE / DEBERÍA / PODRÍA**.
 
