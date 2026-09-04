@@ -124,14 +124,19 @@ Ya implementado:
 | POST | `/course/` | `IsAdmin` — SPEC-001; organización derivada del servidor |
 | POST | `/collaborator/` | `IsAdmin` — SPEC-002; crea `User` + `Collaborator` atómicamente y entrega `temporary_password` solo en el `201` |
 | POST | `/collaborator/{id}/reset-password/` | `IsAdmin` — SPEC-002; regenera la contraseña temporal dentro del tenant, sin body |
+| POST | `/course/{id}/assign/` | `IsAdmin` — SPEC-003; crea `CourseCollaborator` validando tenant, estados y duplicados |
+| GET | `/course/enrollments/` | `IsAdmin` — SPEC-004; panel agregado con `annotate(Count(..., filter=...))`, ordenado activos→inactivos |
+
+`GET /course/` incorpora `enrolled_count` desde SPEC-004. La definición de
+«inscrito vigente» (inscripción visible + colaborador y usuario disponibles) vive
+una sola vez en `apps/course/views.py` (`VIGENTE` / `with_enrolled_count`) y la
+comparten el listado y el panel: al tocar el criterio, cambian los dos juntos.
 
 Pendiente (gap contra el front):
 
 | Método | Ruta | Notas |
 |---|---|---|
-| POST | `/course/{id}/assign/` | crea `CourseCollaborator`; validar que curso y colaborador sean del mismo tenant |
-| GET | `/course/{id}/collaborators/` | inscritos de un curso |
-| GET | `/course/enrollments/` | panel: por curso `full_name`, `version` y cantidad de inscritos, resuelto con `annotate(Count(...))` en un solo queryset — no contar en Python |
+| GET | `/course/{id}/collaborators/` | inscritos de un curso — SPEC-005 |
 | GET | `/course-collaborator/my-courses/` | cursos del colaborador logueado; permiso `IsCollaborator`, vista en `apps/course_collaborator/views.py` |
 
 Header de auth: `Authorization: Token <token>`.
@@ -149,6 +154,19 @@ toda ruta nueva lleva `name=` en `urls.py`.
 
 Todo endpoint nuevo debe traer al menos: el happy path, el **403 con el rol
 equivocado** y el **aislamiento entre organizaciones** (un tenant no ve lo del otro).
+
+## Supuestos
+
+**Obligatorio: al cerrar una feature, sus supuestos van a `SUPUESTOS.md` en la
+misma rama, antes del merge a `dev`** — nunca en un commit suelto posterior. Acá
+bajan los del **contrato de la API**: defaults, validaciones, forma de las
+respuestas y reglas de negocio (los de interfaz van al `SUPUESTOS.md` del front).
+
+Se resuelven primero como `PA-*` en el Artículo 8 del spec y bajan una vez cerrada
+la feature. Formato: sección `## SPEC-00X — <nombre>`, cada supuesto en negrita
+como afirmación, el porqué a continuación y `→ archivo` cuando ayude a ubicarlo.
+El porqué es lo que importa: sin él la línea describe el código en vez de explicar
+la decisión.
 
 ## Bitácora de commits
 
@@ -186,3 +204,8 @@ dos repos.
 | 2026-09-03 | `feature/asignar-curso` | Agregar tests de asignación de cursos (SPEC-003) | Cobertura estricta de contrato, permisos, tenant, estados, entrada hostil y duplicados visibles/ocultos; rojo esperado por ruta inexistente |
 | 2026-09-03 | `feature/asignar-curso` | Permitir asignar cursos a colaboradores vía POST | Endpoint tenant-safe, recursos activos/visibles, duplicados controlados y respuesta anidada; suite completa verde 50/50 |
 | 2026-09-03 | `dev` | Merge de feature/asignar-curso (`--no-ff`) | SPEC-003 cerrada en backend; 16 tests específicos y suite completa verde 50/50 |
+| 2026-09-03 | `feature/panel-inscripciones` | Incorporar SPEC-004 (panel de inscripciones) al repositorio | Define `GET /course/enrollments/` con una sola agregación, `enrolled_count` aditivo en `GET /course/`, conteo de inscritos vigentes y separación de cursos activos/inactivos; resuelve la numeración ambigua que dejó SPEC-003 |
+| 2026-09-03 | `feature/panel-inscripciones` | Agregar tests del panel de inscripciones (SPEC-004) | 20 tests cubren CA-1..CA-16, la reversibilidad de PA-8 y `CaptureQueriesContext` contra el N+1; rojo esperado: ruta inexistente y `enrolled_count` ausente |
+| 2026-09-03 | `feature/panel-inscripciones` | Exponer el panel de inscripciones vía GET /course/enrollments/ | `ListAPIView` con `annotate(Count(..., filter=...))`, orden activos→inactivos, y `enrolled_count` aditivo en `GET /course/` con una única definición de «inscrito vigente»; verde 70/70, sin migraciones |
+| 2026-09-03 | `feature/panel-inscripciones` | Documentar los supuestos de SPEC-004 y exigirlos antes del merge | Criterio de «inscrito vigente», cursos inactivos visibles, orden server-side y agregación única; el protocolo pasa a obligar que los supuestos se escriban al cerrar la feature |
+| 2026-09-03 | `dev` | Merge de feature/panel-inscripciones (`--no-ff`) | SPEC-004 cerrada en backend; 20 tests específicos y suite completa verde 70/70 |

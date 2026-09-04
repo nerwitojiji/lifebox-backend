@@ -1,8 +1,9 @@
 from django.db import IntegrityError, transaction
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from knox.auth import TokenAuthentication
 from rest_framework import serializers
-from rest_framework.generics import GenericAPIView, ListCreateAPIView
+from rest_framework.generics import GenericAPIView, ListAPIView, ListCreateAPIView
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -12,7 +13,28 @@ from apps.user.models import Collaborator
 from utils.custom_permissions import IsAdmin
 
 
+# SPEC-004 RN-5: «inscrito vigente» = inscripción visible de un colaborador
+# disponible, con el mismo criterio de disponibilidad que SPEC-003 RN-5 usa para
+# admitirlo. La definición vive acá una sola vez y la comparten el listado de
+# cursos y el panel, para que los dos conteos no puedan divergir.
+VIGENTE = Q(
+    course_collaborators__show=True,
+    course_collaborators__collaborator__show=True,
+    course_collaborators__collaborator__user__show=True,
+    course_collaborators__collaborator__user__is_active=True,
+)
+
+
+def with_enrolled_count(queryset):
+    """Anota `enrolled_count` con una sola agregación (SPEC-004 RN-6)."""
+    return queryset.annotate(
+        enrolled_count=Count("course_collaborators", filter=VIGENTE)
+    )
+
+
 class CourseListSerializer(serializers.ModelSerializer):
+    enrolled_count = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Course
         fields = [
@@ -23,6 +45,7 @@ class CourseListSerializer(serializers.ModelSerializer):
             "version",
             "is_active",
             "created_at",
+            "enrolled_count",
         ]
 
 
@@ -60,15 +83,41 @@ class CourseListCreateView(ListCreateAPIView):
         return self.request.user.admin_profile.organization
 
     def get_queryset(self):
-        return Course.objects.filter(
-            organization=self.get_organization(),
-            show=True,
+        return with_enrolled_count(
+            Course.objects.filter(
+                organization=self.get_organization(),
+                show=True,
+            )
         ).order_by("-created_at")
 
     def perform_create(self, serializer):
         # RN-4: la organización se deriva del admin autenticado. El serializer no
         # declara el campo, así que un organization del body ya viene descartado.
         serializer.save(organization=self.get_organization())
+
+
+class CourseEnrollmentSummarySerializer(serializers.ModelSerializer):
+    enrolled_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Course
+        fields = ["id", "full_name", "version", "is_active", "enrolled_count"]
+
+
+class CourseEnrollmentsView(ListAPIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAdmin]
+    serializer_class = CourseEnrollmentSummarySerializer
+
+    def get_queryset(self):
+        # RN-2: el tenant sale del admin autenticado; los query params no entran.
+        organization = self.request.user.admin_profile.organization
+        return with_enrolled_count(
+            Course.objects.filter(organization=organization, show=True)
+            # RN-7: activos antes que inactivos y, dentro de cada grupo, por
+            # cantidad de inscritos y nombre. La agrupación la hace el servidor
+            # para que la lista plana sea legible aun sin separarla.
+        ).order_by("-is_active", "-enrolled_count", "full_name")
 
 
 class AssignedCourseSerializer(serializers.ModelSerializer):

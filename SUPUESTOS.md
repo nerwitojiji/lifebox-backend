@@ -106,3 +106,56 @@ mejora el mensaje y la restricción única sigue protegiendo carreras concurrent
 **La respuesta contiene un resumen anidado.** El `201` incluye la inscripción,
 el nombre/versión del curso y el nombre/correo del colaborador. Así el cliente puede
 confirmar la operación sin otra consulta y sin exponer objetos completos.
+
+## SPEC-004 — Panel de inscripciones
+
+**«Inscrito vigente» mide personas que hoy tienen el curso, no historial.** El
+conteo excluye las inscripciones con `show=False` y las de colaboradores dados de
+baja (`Collaborator.show`, `User.show`, `User.is_active`), con el mismo criterio de
+disponibilidad que SPEC-003 usa para admitirlos. La alternativa —contar todo lo
+histórico— daría un número que no responde cuánta gente tiene el curso ahora.
+→ `VIGENTE` y `with_enrolled_count()` en `apps/course/views.py`.
+
+**La definición vive en un solo lugar y la comparten dos endpoints.** El panel y
+`GET /course/` usan la misma anotación, de modo que sus conteos no puedan divergir.
+Al cambiar el criterio, cambian los dos juntos.
+
+**Dar de baja a un colaborador es reversible; ocultar una inscripción no.** La baja
+del colaborador solo lo saca del conteo: la fila de `CourseCollaborator` sigue
+existiendo y reactivarlo restituye el número sin intervención. Ocultar la
+inscripción, en cambio, es definitivo (SPEC-003 no la reactiva).
+
+**Esto asume que dar de baja apagará ambos estados a la vez.** Hoy
+`IsCollaborator` no verifica `show`, así que un colaborador con
+`Collaborator.show=False` y `user.is_active=True` quedaría invisible para el admin
+pero podría seguir entrando y viendo sus cursos, y el panel informaría menos
+inscritos de los que en la práctica acceden. La futura capacidad de baja debe
+apagar `Collaborator.show` **y** `user.is_active` juntos; con esa condición el
+criterio se sostiene sin tocar los permisos.
+
+**Los cursos inactivos aparecen; los ocultos no.** `is_active=False` y
+`show=False` no son lo mismo: el primero cierra la puerta a inscripciones nuevas,
+el segundo saca el registro de circulación. Un curso desactivado conserva a sus
+inscritos, así que esconderlo del panel ocultaría inscripciones vivas. Hoy ningún
+flujo de la API produce `is_active=False` —el campo es de solo lectura al crear y
+no hay endpoint de edición—, pero el panel define su postura porque el modelo lo
+permite.
+
+**El orden lo fija el servidor, no el cliente.** `-is_active`, luego
+`-enrolled_count`, luego `full_name`. La lista llega ya agrupada para que sea
+legible aun sin separarla, y para que un curso inactivo con muchos inscritos no se
+cuele antes de uno activo. No se ofrece ordenamiento configurable.
+
+**El conteo se resuelve en una sola consulta agregada.** `annotate(Count(...,
+filter=Q(...)))` en vez de contar en Python o por curso. Un test compara el número
+de consultas con uno y con siete cursos para que el N+1 no pueda reaparecer.
+
+**La respuesta es una lista plana, sin envoltorio.** No se devuelve
+`{ "active": [], "inactive": [] }`: la separación entre activos e inactivos es de
+presentación, y un envoltorio habría roto la convención de los demás listados.
+Los totales los deriva la interfaz.
+
+**`enrolled_count` en `GET /course/` es un cambio aditivo.** Los campos previos
+conservan nombre, tipo y orden; solo se suma uno. Se prefirió extender ese endpoint
+antes que hacer que la pantalla de cursos consumiera el panel y cruzara dos listas
+por `id`.
