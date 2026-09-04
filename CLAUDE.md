@@ -126,17 +126,24 @@ Ya implementado:
 | POST | `/collaborator/{id}/reset-password/` | `IsAdmin` — SPEC-002; regenera la contraseña temporal dentro del tenant, sin body |
 | POST | `/course/{id}/assign/` | `IsAdmin` — SPEC-003; crea `CourseCollaborator` validando tenant, estados y duplicados |
 | GET | `/course/enrollments/` | `IsAdmin` — SPEC-004; panel agregado con `annotate(Count(..., filter=...))`, ordenado activos→inactivos |
+| GET | `/course/{id}/collaborators/` | `IsAdmin` — SPEC-005; inscritos vigentes de un curso, `-assigned_at` |
 
 `GET /course/` incorpora `enrolled_count` desde SPEC-004. La definición de
 «inscrito vigente» (inscripción visible + colaborador y usuario disponibles) vive
-una sola vez en `apps/course/views.py` (`VIGENTE` / `with_enrolled_count`) y la
-comparten el listado y el panel: al tocar el criterio, cambian los dos juntos.
+una sola vez en `apps/course/views.py` (`INSCRITO_VIGENTE` / `vigente(prefix)`) y la
+comparten el listado, el panel y la lista de inscritos: si el contador dice 3, la
+lista trae 3. Al tocar el criterio, cambian los tres juntos.
+
+**Trampa:** `GET /course/{id}/collaborators/` **no** exige `is_active=True`, pero
+`POST /course/{id}/assign/` **sí** (responde `404`). Es deliberado —uno lee
+inscritos existentes, el otro crea un vínculo nuevo— y hay un test que lo fija
+(`test_asignar_sigue_rechazando_el_curso_inactivo`). No igualar las dos
+condiciones.
 
 Pendiente (gap contra el front):
 
 | Método | Ruta | Notas |
 |---|---|---|
-| GET | `/course/{id}/collaborators/` | inscritos de un curso — SPEC-005 |
 | GET | `/course-collaborator/my-courses/` | cursos del colaborador logueado; permiso `IsCollaborator`, vista en `apps/course_collaborator/views.py` |
 
 Header de auth: `Authorization: Token <token>`.
@@ -209,3 +216,8 @@ dos repos.
 | 2026-09-03 | `feature/panel-inscripciones` | Exponer el panel de inscripciones vía GET /course/enrollments/ | `ListAPIView` con `annotate(Count(..., filter=...))`, orden activos→inactivos, y `enrolled_count` aditivo en `GET /course/` con una única definición de «inscrito vigente»; verde 70/70, sin migraciones |
 | 2026-09-03 | `feature/panel-inscripciones` | Documentar los supuestos de SPEC-004 y exigirlos antes del merge | Criterio de «inscrito vigente», cursos inactivos visibles, orden server-side y agregación única; el protocolo pasa a obligar que los supuestos se escriban al cerrar la feature |
 | 2026-09-03 | `dev` | Merge de feature/panel-inscripciones (`--no-ff`) | SPEC-004 cerrada en backend; 20 tests específicos y suite completa verde 70/70 |
+| 2026-09-03 | `feature/inscribir-colaborador` | Incorporar SPEC-005 (inscribir colaborador) al repositorio | Define `GET /course/{id}/collaborators/`, que admite cursos inactivos al revés que el de asignar, y ata la lista al contador de SPEC-004; marca superseded PA-1 de SPEC-003 y RN-11 de SPEC-004 |
+| 2026-09-03 | `feature/inscribir-colaborador` | Agregar tests de los inscritos por curso (SPEC-005) | 16 tests cubren CA-1..CA-15, con un test que contrasta este endpoint contra el de asignar en curso inactivo y otro que iguala el largo de la lista al `enrolled_count`; rojo esperado por ruta inexistente |
+| 2026-09-03 | `feature/inscribir-colaborador` | Listar los inscritos de un curso vía GET /course/{id}/collaborators/ | `ListAPIView` que admite cursos inactivos (RN-4) y `select_related`; el criterio «inscrito vigente» se factoriza en `vigente(prefix)` y pasa a gobernar contador y lista; verde 86/86, sin migraciones |
+| 2026-09-03 | `feature/inscribir-colaborador` | Documentar los supuestos de SPEC-005 | La asimetría entre leer e inscribir en un curso inactivo, la definición única de «inscrito vigente» y el orden por fecha |
+| 2026-09-03 | `dev` | Merge de feature/inscribir-colaborador (`--no-ff`) | SPEC-005 cerrada en backend; 16 tests específicos y suite completa verde 86/86 |

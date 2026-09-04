@@ -2,8 +2,12 @@
 
 - **Capacidad:** Visibilidad de inscripciones para el administrador
 - **Feature:** Panel de inscripciones · rama `feature/panel-inscripciones`
-- **Estado:** Aprobada
+- **Estado:** Aprobada · **RN-11 y Artículo 7 (frontend) superseded por SPEC-005**
 - **Repos:** `lifebox-backend` (endpoint) · `lifebox-frontend` (interfaz)
+
+> **Nota (SPEC-005):** el panel dejó de ser de solo lectura: incorpora la acción de
+> inscribir y filas expandibles con los inscritos de cada curso. Todo el backend de
+> esta spec, la separación activos/inactivos y los totales de RN-12 se conservan.
 
 > Vocabulario normativo (RFC 2119): **DEBE / NO DEBE / DEBERÍA / PODRÍA**.
 

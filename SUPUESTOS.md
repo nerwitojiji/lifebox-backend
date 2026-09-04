@@ -159,3 +159,32 @@ Los totales los deriva la interfaz.
 conservan nombre, tipo y orden; solo se suma uno. Se prefirió extender ese endpoint
 antes que hacer que la pantalla de cursos consumiera el panel y cruzara dos listas
 por `id`.
+
+## SPEC-005 — Inscribir y ver inscritos
+
+**Leer los inscritos de un curso inactivo SÍ se permite; inscribir en él NO.**
+`GET /course/{id}/collaborators/` no exige `is_active=True`, mientras que
+`POST /course/{id}/assign/` responde `404`. La asimetría es deliberada y responde a
+que son operaciones distintas: una **crea** un vínculo —y un curso retirado no debe
+admitir gente nueva— y la otra solo **lee** los que ya existen —y un curso retirado
+conserva a los suyos, que es justamente el caso de uso al versionar—. Está
+comentada en el código y fijada por
+`test_asignar_sigue_rechazando_el_curso_inactivo`, que ejerce los dos endpoints
+sobre el mismo curso en la misma prueba. **No igualar las dos condiciones.**
+→ `CourseCollaboratorsView.get_course()` vs `CourseAssignView.get_course()` en
+`apps/course/views.py`.
+
+**Una sola definición de «inscrito vigente» gobierna tres lugares.** El criterio se
+factorizó en `vigente(prefix)`: sin prefijo filtra `CourseCollaborator` directo, y
+con `course_collaborators__` se lo mira desde `Course`. Lo usan el
+`annotate(Count(...))` del panel, el `enrolled_count` del listado de cursos y el
+filtro de esta lista. Si el contador dice 3, la lista trae 3 — y hay un test que lo
+compara para que no puedan separarse.
+
+**El orden es por fecha descendente, no alfabético.** Lo recién inscrito aparece
+primero, porque el uso inmediato del endpoint es confirmar a quien se acaba de
+inscribir. El desempate sí es por nombre.
+
+**La lista no expone al colaborador completo.** Se devuelve `id`, `full_name` y
+`email` reutilizando el serializer que ya usaba la asignación, en vez del objeto
+entero. Es lo que la interfaz necesita y no filtra más de lo debido.
