@@ -221,3 +221,4 @@ dos repos.
 | 2026-09-03 | `feature/inscribir-colaborador` | Listar los inscritos de un curso vía GET /course/{id}/collaborators/ | `ListAPIView` que admite cursos inactivos (RN-4) y `select_related`; el criterio «inscrito vigente» se factoriza en `vigente(prefix)` y pasa a gobernar contador y lista; verde 86/86, sin migraciones |
 | 2026-09-03 | `feature/inscribir-colaborador` | Documentar los supuestos de SPEC-005 | La asimetría entre leer e inscribir en un curso inactivo, la definición única de «inscrito vigente» y el orden por fecha |
 | 2026-09-03 | `dev` | Merge de feature/inscribir-colaborador (`--no-ff`) | SPEC-005 cerrada en backend; 16 tests específicos y suite completa verde 86/86 |
+| 2026-09-04 | `feature/mis-cursos` | Incorporar SPEC-006 (mis cursos) al repositorio | Define `GET /course-collaborator/my-courses/`, primera vista del lado del colaborador; el colaborador sale del token y el aislamiento se prueba entre pares de la misma organización |
