@@ -162,3 +162,52 @@ class CreateCourseTests(APITestCase):
 
         self.assertEqual(listado.status_code, status.HTTP_200_OK)
         self.assertNotIn("Curso interno de A", [curso["full_name"] for curso in listado.data])
+
+    # -- SPEC-007: la validación del nombre alcanza también a la creación -----
+
+    def test_creacion_rechaza_los_nombres_invalidos(self):
+        """CA-39: SPEC-007 RN-5 — la misma lista que rechaza el PATCH (CA-4).
+
+        Si este test y el de edición dejan de coincidir, la regla se declaró
+        dos veces.
+        """
+        self.authenticate("admin.a@test.com")
+
+        for nombre in ["", ".", "..", "---", "12", "a", "  a  "]:
+            with self.subTest(nombre=nombre):
+                response = self.client.post(
+                    self.url, {"full_name": nombre}, format="json"
+                )
+
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn("full_name", response.data)
+                self.assertFalse(Course.objects.filter(full_name=nombre).exists())
+
+    def test_creacion_recorta_los_espacios_del_nombre(self):
+        """CA-40: el mínimo se mide sobre el texto recortado, y así se guarda."""
+        self.authenticate("admin.a@test.com")
+
+        response = self.client.post(
+            self.url,
+            {"full_name": "  Prevención de riesgos  "},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        curso = Course.objects.get(id=response.data["id"])
+        self.assertEqual(curso.full_name, "Prevención de riesgos")
+
+    def test_un_curso_viejo_con_nombre_invalido_sigue_siendo_manejable(self):
+        """CA-41: SPEC-007 PA-14 — la regla no se aplica retroactivamente."""
+        self.authenticate("admin.a@test.com")
+        viejo = Course.objects.create(full_name=".", organization=self.org_a)
+
+        listado = self.client.get(self.url)
+        self.assertIn(viejo.pk, [curso["id"] for curso in listado.data])
+
+        baja = self.client.patch(
+            reverse("course-detail", kwargs={"pk": viejo.pk}),
+            {"is_active": False},
+            format="json",
+        )
+        self.assertEqual(baja.status_code, status.HTTP_200_OK)
