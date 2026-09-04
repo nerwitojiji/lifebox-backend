@@ -128,12 +128,26 @@ Ya implementado:
 | GET | `/course/enrollments/` | `IsAdmin` — SPEC-004; panel agregado con `annotate(Count(..., filter=...))`, ordenado activos→inactivos |
 | GET | `/course/{id}/collaborators/` | `IsAdmin` — SPEC-005; inscritos vigentes de un curso, `-assigned_at` |
 | GET | `/course-collaborator/my-courses/` | `IsCollaborator` — SPEC-006; los cursos del colaborador del token, sin datos de otros |
+| GET/PATCH/DELETE | `/course/{id}/` | `IsAdmin` — SPEC-007; corregir, dar de baja (`is_active`) y eliminar (`show`). El `DELETE` responde `400` si el curso tiene inscritos vigentes |
+| POST | `/course/{id}/new-version/` | `IsAdmin` — SPEC-007; crea un curso nuevo con la versión pedida y deja el de origen inactivo, sin migrar inscritos |
+| DELETE | `/course/{id}/collaborators/{enrollment_id}/` | `IsAdmin` — SPEC-007; desinscribe (`show=False`); admite cursos inactivos |
+| DELETE | `/collaborator/{id}/` | `IsAdmin` — SPEC-007; da de baja: `Collaborator.show=False` **y** `user.is_active=False` en una transacción |
+
+**Los cinco endpoints de SPEC-007 todavía no están declarados en
+`apiEndpoints.ts`**: son bonus, no parte del contrato original. Al implementar su
+interfaz hay que agregarlos ahí primero, que es la fuente de verdad de las rutas.
 
 `GET /course/` incorpora `enrolled_count` desde SPEC-004. La definición de
 «inscrito vigente» (inscripción visible + colaborador y usuario disponibles) vive
 una sola vez en `apps/course/views.py` (`INSCRITO_VIGENTE` / `vigente(prefix)`) y la
 comparten el listado, el panel y la lista de inscritos: si el contador dice 3, la
 lista trae 3. Al tocar el criterio, cambian los tres juntos.
+
+**Trampa (SPEC-007):** `POST /course/{id}/assign/` ante un par curso-colaborador
+**ya existente pero oculto** responde `201` reactivando esa fila, no `400`. La
+`UniqueConstraint(course, collaborator)` no filtra por `show`, así que una segunda
+fila es imposible; sin la reactivación, desinscribir por error sería irreversible.
+Solo el duplicado **visible** responde `400`.
 
 **Trampa:** `GET /course/{id}/collaborators/` **no** exige `is_active=True`, pero
 `POST /course/{id}/assign/` **sí** (responde `404`). Es deliberado —uno lee
@@ -226,3 +240,4 @@ dos repos.
 | 2026-09-04 | `dev` | Merge de feature/mis-cursos (`--no-ff`) | SPEC-006 cerrada en backend; 15 tests específicos y suite completa verde 101/101. **Con esto no queda ningún endpoint pendiente del contrato del front** |
 | 2026-09-04 | `feature/correcciones` | Incorporar SPEC-007 (correcciones) al repositorio | Primer bonus: da al catálogo y a la inscripción las transiciones que les faltaban (corregir, retirar, versionar, desinscribir, dar de baja), todas por borrado lógico. Supersede SPEC-003 RN-6 (la reinscripción ahora reactiva la fila oculta) y SPEC-001 RN-3 (el nombre de curso pasa a exigir 3 caracteres y una letra, también al crear). Suma el rechazo en el login de una cuenta sin perfil, que hoy deja al front rebotando entre `/admin` y `/colaborador` |
 | 2026-09-04 | `feature/correcciones` | Agregar tests de correcciones (SPEC-007) | 50 tests nuevos cubren CA-1..CA-44 en cuatro archivos, más las adiciones a `test_create_course.py` y `test_auth.py`; rojo esperado: 59 errores por las rutas inexistentes y 7 fallos de reglas ya probables contra el código actual (6 nombres de curso que hoy se aceptan y el login sin perfil que hoy entrega token) |
+| 2026-09-04 | `feature/correcciones` | Permitir corregir, versionar y dar de baja | Cinco endpoints nuevos, todos por borrado lógico: detalle del curso con `PATCH`/`DELETE`, versión nueva, desinscribir y baja de colaborador. La reinscripción pasa a reactivar la fila oculta (supersede SPEC-003 RN-6, y su test se reescribe apuntando a la regla nueva), el nombre de curso gana un piso compartido por crear y editar, y el login rechaza a la cuenta sin perfil; verde 151/151, sin migraciones |

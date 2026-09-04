@@ -184,7 +184,16 @@ class AssignCourseTests(APITestCase):
         self.assertIn("collaborator_id", response.data)
         self.assertEqual(CourseCollaborator.objects.count(), 1)
 
-    def test_asignacion_oculta_no_se_reactiva(self):
+    def test_asignacion_oculta_se_reactiva(self):
+        """SPEC-007 RN-18 supersede a SPEC-003 RN-6/CA-10.
+
+        Este test afirmaba lo contrario —que una inscripción oculta devolvía
+        400 y no se reactivaba— y era correcto mientras nada podía ocultar una
+        inscripción. Al existir la desinscripción (borrado lógico), mantenerlo
+        haría que desinscribir por error fuera irreversible: el 400 diría «ya
+        está inscrito» sobre una fila que nadie ve. La reinscripción tiene su
+        cobertura completa en test_unenroll.py (CA-29 y CA-30).
+        """
         enrollment = CourseCollaborator.objects.create(
             course=self.course_a,
             collaborator=self.collaborator_a,
@@ -196,10 +205,9 @@ class AssignCourseTests(APITestCase):
             self.url(), {"collaborator_id": self.collaborator_a.id}, format="json"
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("collaborator_id", response.data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         enrollment.refresh_from_db()
-        self.assertFalse(enrollment.show)
+        self.assertTrue(enrollment.show)
         self.assertEqual(CourseCollaborator.objects.count(), 1)
 
     def test_colaborador_no_puede_asignar_cursos(self):

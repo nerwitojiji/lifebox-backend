@@ -231,3 +231,102 @@ esa persona pudiendo entrar pero recibiendo `403` en todas partes, que es peor q
 el estado actual. La condición para que el criterio se sostenga sigue siendo la
 misma: la capacidad de baja debe apagar `Collaborator.show` **y** `user.is_active`
 a la vez, con lo cual la persona no puede ni autenticarse.
+
+> **Cerrado por SPEC-007.** `DELETE /collaborator/{id}/` apaga los dos campos en
+> una sola transacción (RN-21), que es exactamente la condición que este supuesto
+> exigía. El hueco dejó de existir sin tener que endurecer `IsCollaborator`.
+
+## SPEC-007 — Correcciones: reasignar, versionar y dar de baja
+
+**Ningún endpoint borra filas: todos escriben `show`.** Es la regla de
+arquitectura del repo, confirmada por quien entregó la base, y acá tiene una razón
+concreta: **todas las FK del proyecto son `on_delete=CASCADE`**. Un
+`curso.delete()` no borra un curso, borra el curso *y todas sus inscripciones* en
+silencio — justo el registro de quién lo cursó, que es lo que el panel y el
+versionado existen para conservar. La operación que el admin cree hacer y la que
+la base hace no serían la misma. Con `show=False` el borrado es local y
+reversible.
+→ `CourseDetailView.perform_destroy()`, `CourseUnenrollView.perform_destroy()` y
+`CollaboratorDeactivateView.perform_destroy()`.
+
+**«Dar de baja» y «eliminar» son dos operaciones distintas, y las dos existen.**
+Dar de baja un curso (`is_active=False`, vía `PATCH`) lo retira de circulación
+pero lo deja a la vista con sus inscritos; eliminarlo (`show=False`, vía `DELETE`)
+lo hace desaparecer. Ofrecer solo una obligaba a elegir entre no poder deshacer un
+error de tipeo o poder borrar historial. Por eso **`DELETE` responde `400` si el
+curso tiene inscritos vigentes**: eliminar es para el curso creado por error, y
+quien quiera retirar uno que ya se dictó tiene la baja.
+
+**Versionar crea un curso nuevo y retira el anterior; no edita el campo
+`version`.** La versión es parte de la identidad de lo que alguien cursó: si se
+editara en su lugar, los inscritos de la 1.0 pasarían a figurar como inscritos de
+la 2.0 y se perdería el registro de qué contenido recibieron. Por la misma razón
+**los inscritos no se migran** a la versión nueva: migrarlos afirmaría que esas
+personas cursaron algo que todavía no existía. El curso de origen queda
+**inactivo, no oculto**, porque su lista de inscritos es justamente la información
+que el versionado quiere preservar.
+→ `CourseNewVersionView.post()`.
+
+**`PATCH` no acepta `version` aunque el campo sea editable en el modelo.** Un solo
+camino por operación: si se pudiera editar, existirían dos formas de cambiar la
+versión y la del `PATCH` perdería el curso anterior.
+
+**Reinscribir a alguien desinscrito reactiva su fila en vez de crear una nueva, y
+conserva la fecha original.** Esto **supersede SPEC-003 RN-6**, que devolvía `400`
+ante un par ya existente aunque estuviera oculto. La `UniqueConstraint(course,
+collaborator)` no filtra por `show`, así que una segunda fila es imposible y el
+`400` habría dicho «ya está inscrito» sobre algo que nadie ve: desinscribir por
+error habría sido irreversible. `assigned_at` no se toca porque responde «desde
+cuándo tiene este curso asignado», y una desinscripción equivocada no cambia esa
+respuesta; el costo aceptado es que no queda registro de la interrupción.
+→ `CourseAssignView.post()`.
+
+**Desinscribir se permite en un curso inactivo, aunque inscribir no.** Misma
+asimetría deliberada que SPEC-005 documentó para la lista de inscritos: crear un
+vínculo nuevo en un curso retirado no tiene sentido, corregir uno existente sí.
+
+**No hay endpoint de «reasignar».** Mover a alguien de un curso a otro es
+desinscribir de uno e inscribir en otro, dos operaciones que ya existen. Un
+endpoint propio sería una tercera forma de escribir lo mismo, con sus propias
+reglas de tenant que mantener en sincronía.
+
+**El nombre de un curso exige 3 caracteres y al menos una letra, al crear y al
+editar.** Hasta esta feature `"."` era un nombre de curso válido: lo único que se
+validaba era «no vacío» (SPEC-001 RN-3, ahora superseded). El colaborador que abre
+«Mis cursos» tiene que entender qué va a cursar. El piso es el mínimo que rechaza
+la basura evidente (`"."`, `"---"`, `"12"`, `"a"`) sin ponerse a juzgar la calidad
+editorial de lo que escribe un administrador autenticado; **el costo aceptado es
+una sigla real de dos caracteres**, como «5S», que hay que escribir «5S — Orden y
+limpieza». La regla se declara **una sola vez** y la comparten los dos serializers:
+duplicada, `POST` y `PATCH` se separarían a la primera corrección.
+→ `validar_nombre_de_curso()` en `apps/course/views.py`.
+
+**La regla del nombre no se aplica retroactivamente.** No hay migración que
+renombre los cursos ya guardados: reescribir el dato de una organización para
+satisfacer una regla nueva es peor que convivir con él. Un curso viejo con nombre
+inválido se sigue listando y se puede dar de baja; solo se le exige el nombre
+nuevo a quien vaya a editarlo.
+
+**El login rechaza a una cuenta sin ningún perfil.** El rol no es un campo: se
+deriva de la existencia de `admin_profile` o `collaborator_profile`. Un usuario sin
+ninguno de los dos autentica bien, recibe `role: null`, y el middleware del front
+lo manda de `/admin` a `/colaborador` y de vuelta, porque `isAdmin` e
+`isCollaborator` son las dos falsas. No es una cuenta inútil: es una cuenta que
+rompe la aplicación. Se le responde `400` con un mensaje propio y no con
+«Credenciales inválidas», porque en ese punto ya acertó su contraseña: es su
+cuenta y no hay enumeración que evitar.
+→ `LoginView.post()` en `apps/user/views.py`.
+
+**Un superusuario de `createsuperuser` deja de poder entrar por la API.** Es el
+efecto secundario de lo anterior y se acepta a propósito: ese usuario existe para
+`/admin/` con sesión de Django, y por la API no tendría ninguna operación
+disponible de todos modos —`IsAdmin` mira `admin_profile`, no `is_superuser`—. Lo
+único que cambia es que ahora se lo dicen en vez de dejarlo entrar a una interfaz
+que rebota.
+
+**No se detectan ni se limpian usuarios huérfanos.** El agujero se cierra
+impidiendo que entren, no persiguiendo filas. Mientras la API no borre
+físicamente, un huérfano solo lo puede fabricar alguien con acceso al `/admin/` de
+Django, que es también la única puerta que queda para una purga real —por ejemplo,
+un derecho a supresión de la Ley 19.628— y que está fuera del alcance del uso
+normal a propósito.

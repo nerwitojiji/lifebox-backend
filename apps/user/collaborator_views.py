@@ -2,7 +2,11 @@ from django.db import transaction
 from django.utils.crypto import get_random_string
 from knox.auth import TokenAuthentication
 from rest_framework import serializers, status
-from rest_framework.generics import GenericAPIView, ListCreateAPIView
+from rest_framework.generics import (
+    DestroyAPIView,
+    GenericAPIView,
+    ListCreateAPIView,
+)
 from rest_framework.response import Response
 from rest_framework.validators import UniqueValidator
 
@@ -94,6 +98,33 @@ class CollaboratorListView(ListCreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save(organization=self.get_organization())
+
+
+class CollaboratorDeactivateView(DestroyAPIView):
+    """SPEC-007 RN-20 a RN-23: dar de baja a un colaborador."""
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAdmin]
+
+    def get_queryset(self):
+        # El tenant sale del admin autenticado; un colaborador de otra
+        # organización o ya dado de baja es indistinguible de uno inexistente.
+        organization = self.request.user.admin_profile.organization
+        return Collaborator.objects.filter(
+            organization=organization,
+            show=True,
+        ).select_related("user")
+
+    def perform_destroy(self, collaborator):
+        # RN-21: las dos escrituras van juntas. Sin desactivar el usuario, la
+        # baja sería cosmética: seguiría iniciando sesión y viendo sus cursos.
+        # RN-22: las inscripciones no se tocan; dejan de contar por el criterio
+        # de «inscrito vigente», que ya exige el colaborador disponible.
+        with transaction.atomic():
+            collaborator.show = False
+            collaborator.save(update_fields=["show", "updated_at"])
+            collaborator.user.is_active = False
+            collaborator.user.save(update_fields=["is_active", "updated_at"])
 
 
 class CollaboratorResetPasswordView(GenericAPIView):
