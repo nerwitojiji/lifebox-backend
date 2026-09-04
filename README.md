@@ -96,18 +96,46 @@ Base de datos: SQLite por defecto (`db.sqlite3`, se crea al migrar). No es oblig
 
 ## Endpoints disponibles
 
+Header de autenticación: `Authorization: Token <token>`.
+La organización nunca viaja en la petición: se deriva del usuario autenticado.
+
+### Sesión
+
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|-------------|
-| POST | `/user/login/` | No | Login → `{ token, user }` |
+| POST | `/user/login/` | No | Login → `{ token, user }`. Rechaza una cuenta sin perfil asociado |
 | POST | `/user/verify-token/` | Token | Verifica sesión |
 | GET | `/user/me/` | Token | Usuario actual |
-| GET | `/course/` | Admin | Lista cursos de la organización |
-| POST | `/course/` | Admin | Crea un curso en la organización |
-| GET | `/collaborator/` | Admin | Lista colaboradores de la organización |
-| POST | `/collaborator/` | Admin | Crea un colaborador y entrega su contraseña temporal una vez |
-| POST | `/collaborator/{id}/reset-password/` | Admin | Regenera la contraseña temporal del colaborador |
 
-Header de autenticación: `Authorization: Token <token>`
+### Cursos
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| GET | `/course/` | Admin | Lista los cursos de la organización, con `enrolled_count` |
+| POST | `/course/` | Admin | Crea un curso |
+| GET | `/course/{id}/` | Admin | Detalle de un curso |
+| PATCH | `/course/{id}/` | Admin | Corrige nombre, descripción y duración; da de baja o reactiva (`is_active`) |
+| DELETE | `/course/{id}/` | Admin | Elimina (borrado lógico). Responde `400` si el curso tiene inscritos |
+| POST | `/course/{id}/new-version/` | Admin | Publica una versión nueva y deja la anterior dada de baja |
+
+### Inscripciones
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| GET | `/course/enrollments/` | Admin | Resumen por curso: nombre, versión y cantidad de inscritos |
+| GET | `/course/{id}/collaborators/` | Admin | Inscritos vigentes de un curso |
+| POST | `/course/{id}/assign/` | Admin | Inscribe a un colaborador. Reactiva la inscripción si estaba desinscrito |
+| DELETE | `/course/{id}/collaborators/{enrollment_id}/` | Admin | Desinscribe (borrado lógico) |
+| GET | `/course-collaborator/my-courses/` | Colaborador | Los cursos asignados a quien está autenticado |
+
+### Colaboradores
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| GET | `/collaborator/` | Admin | Lista colaboradores de la organización |
+| POST | `/collaborator/` | Admin | Crea un colaborador y entrega su contraseña temporal una sola vez |
+| POST | `/collaborator/{id}/reset-password/` | Admin | Regenera la contraseña temporal |
+| DELETE | `/collaborator/{id}/` | Admin | Da de baja: pierde el acceso, conserva su historial |
 
 ## Estructura
 
