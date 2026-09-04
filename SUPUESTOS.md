@@ -188,3 +188,46 @@ inscribir. El desempate sí es por nombre.
 **La lista no expone al colaborador completo.** Se devuelve `id`, `full_name` y
 `email` reutilizando el serializer que ya usaba la asignación, en vez del objeto
 entero. Es lo que la interfaz necesita y no filtra más de lo debido.
+
+## SPEC-006 — Mis cursos
+
+**El colaborador sale del token y de ningún otro lado.** La vista no lee nada de
+la petición: ni body, ni query params, ni URL. No existe forma de pedir los cursos
+de otra persona, porque no hay parámetro que lo permita. El aislamiento no depende
+de validar una entrada, sino de que esa entrada no exista.
+→ `MyCoursesView.get_queryset()` en `apps/course_collaborator/views.py`.
+
+**El aislamiento se prueba entre compañeros, no solo entre organizaciones.** Todas
+las suites anteriores miraban el lado del admin, donde el riesgo es cruzar tenants.
+Acá el riesgo es otro: que Ana vea los cursos de Luis siendo los dos de la misma
+empresa. Por eso el fixture pone a dos colaboradores en la misma organización.
+
+**Se filtra igual por organización, aunque sea redundante.** La asignación ya
+impide cruzar tenants, pero el modelo `CourseCollaborator` no lo garantiza por sí
+solo —nada a nivel de base impide una fila que enlace un colaborador con un curso
+ajeno—. El filtro extra no cuesta nada y evita que un dato inconsistente se
+convierta en una fuga.
+
+**Los cursos inactivos se listan; los ocultos no.** Mismo criterio que SPEC-004 y
+SPEC-005: `is_active=False` es un curso retirado que conserva a sus inscritos —y
+quien lo tenía asignado conserva la obligación—, mientras que `show=False` es un
+borrado lógico. Esconder un curso retirado le taparía trabajo pendiente a la
+persona.
+
+**La respuesta no expone `enrolled_count` ni datos de otros inscritos.** Cuántos
+compañeros tiene el curso no es información del colaborador. El serializer es una
+clase aparte precisamente para que el campo del panel no se filtre acá por
+herencia.
+
+**El curso va anidado dentro de la inscripción.** Simétrico a
+`GET /course/{id}/collaborators/`, que anida el colaborador: en los dos casos el
+recurso es la inscripción, y `assigned_at` pertenece a ella, no al curso.
+
+**El hueco de PA-8 sigue sin parchear, y es deliberado.** Un colaborador con
+`Collaborator.show=False` y `user.is_active=True` podría iniciar sesión y ver esta
+pantalla. No se endureció `IsCollaborator` porque hoy **ningún flujo de la API
+puede dar de baja a un colaborador** —no existe el endpoint—, y el parche dejaría a
+esa persona pudiendo entrar pero recibiendo `403` en todas partes, que es peor que
+el estado actual. La condición para que el criterio se sostenga sigue siendo la
+misma: la capacidad de baja debe apagar `Collaborator.show` **y** `user.is_active`
+a la vez, con lo cual la persona no puede ni autenticarse.
