@@ -105,7 +105,7 @@ valer en el backend (queryset filtrado), sin confiar en el front.
 | `/user/` | `apps.user.urls` | login, verify-token, me |
 | `/course/` | `apps.course.urls` | |
 | `/collaborator/` | `apps.user.collaborator_urls` | **el CRUD de colaboradores vive en `apps/user/`**, en el par `collaborator_urls.py` / `collaborator_views.py`, no en una app propia |
-| `/course-collaborator/` | *(falta)* | hay que agregar el `include` para `my-courses/`; `apps/course_collaborator/` no tiene `urls.py` todavía |
+| `/course-collaborator/` | `apps.course_collaborator.urls` | `my-courses/` — la única vista del lado del colaborador |
 
 ### Contrato con el frontend
 
@@ -127,6 +127,7 @@ Ya implementado:
 | POST | `/course/{id}/assign/` | `IsAdmin` — SPEC-003; crea `CourseCollaborator` validando tenant, estados y duplicados |
 | GET | `/course/enrollments/` | `IsAdmin` — SPEC-004; panel agregado con `annotate(Count(..., filter=...))`, ordenado activos→inactivos |
 | GET | `/course/{id}/collaborators/` | `IsAdmin` — SPEC-005; inscritos vigentes de un curso, `-assigned_at` |
+| GET | `/course-collaborator/my-courses/` | `IsCollaborator` — SPEC-006; los cursos del colaborador del token, sin datos de otros |
 
 `GET /course/` incorpora `enrolled_count` desde SPEC-004. La definición de
 «inscrito vigente» (inscripción visible + colaborador y usuario disponibles) vive
@@ -140,11 +141,8 @@ inscritos existentes, el otro crea un vínculo nuevo— y hay un test que lo fij
 (`test_asignar_sigue_rechazando_el_curso_inactivo`). No igualar las dos
 condiciones.
 
-Pendiente (gap contra el front):
-
-| Método | Ruta | Notas |
-|---|---|---|
-| GET | `/course-collaborator/my-courses/` | cursos del colaborador logueado; permiso `IsCollaborator`, vista en `apps/course_collaborator/views.py` |
+**No queda ningún endpoint pendiente del contrato del front**: todo lo declarado en
+`apiEndpoints.ts` está implementado.
 
 Header de auth: `Authorization: Token <token>`.
 Login inválido responde `400` con `{"text": "Credenciales inválidas"}` — el front
@@ -221,3 +219,8 @@ dos repos.
 | 2026-09-03 | `feature/inscribir-colaborador` | Listar los inscritos de un curso vía GET /course/{id}/collaborators/ | `ListAPIView` que admite cursos inactivos (RN-4) y `select_related`; el criterio «inscrito vigente» se factoriza en `vigente(prefix)` y pasa a gobernar contador y lista; verde 86/86, sin migraciones |
 | 2026-09-03 | `feature/inscribir-colaborador` | Documentar los supuestos de SPEC-005 | La asimetría entre leer e inscribir en un curso inactivo, la definición única de «inscrito vigente» y el orden por fecha |
 | 2026-09-03 | `dev` | Merge de feature/inscribir-colaborador (`--no-ff`) | SPEC-005 cerrada en backend; 16 tests específicos y suite completa verde 86/86 |
+| 2026-09-04 | `feature/mis-cursos` | Incorporar SPEC-006 (mis cursos) al repositorio | Define `GET /course-collaborator/my-courses/`, primera vista del lado del colaborador; el colaborador sale del token y el aislamiento se prueba entre pares de la misma organización |
+| 2026-09-04 | `feature/mis-cursos` | Agregar tests de mis cursos (SPEC-006) | 15 tests cubren CA-1..CA-14, con Ana y Luis en el mismo tenant para probar el aislamiento entre compañeros y query params que intentan suplantar identidad; estrena `apps/course_collaborator/tests/`; rojo esperado por ruta inexistente |
+| 2026-09-04 | `feature/mis-cursos` | Exponer los cursos del colaborador vía GET /course-collaborator/my-courses/ | Estrena `apps/course_collaborator/` con vista, `urls.py` y el `include` que faltaba; primer uso de `IsCollaborator`, colaborador derivado del token; verde 101/101, sin migraciones |
+| 2026-09-04 | `feature/mis-cursos` | Documentar los supuestos de SPEC-006 | El colaborador sale del token, el aislamiento entre compañeros, el filtro redundante por organización y por qué PA-8 sigue sin parchear |
+| 2026-09-04 | `dev` | Merge de feature/mis-cursos (`--no-ff`) | SPEC-006 cerrada en backend; 15 tests específicos y suite completa verde 101/101. **Con esto no queda ningún endpoint pendiente del contrato del front** |
