@@ -8,6 +8,7 @@ urlpatterns = [
     path("user/", include("apps.user.urls")),
     path("course/", include("apps.course.urls")),
     path("collaborator/", include("apps.user.collaborator_urls")),
+    path("course-collaborator/", include("apps.course_collaborator.urls")),
 ]
 
 if settings.DEBUG:
