@@ -155,6 +155,19 @@ toda ruta nueva lleva `name=` en `urls.py`.
 Todo endpoint nuevo debe traer al menos: el happy path, el **403 con el rol
 equivocado** y el **aislamiento entre organizaciones** (un tenant no ve lo del otro).
 
+## Supuestos
+
+**Obligatorio: al cerrar una feature, sus supuestos van a `SUPUESTOS.md` en la
+misma rama, antes del merge a `dev`** — nunca en un commit suelto posterior. Acá
+bajan los del **contrato de la API**: defaults, validaciones, forma de las
+respuestas y reglas de negocio (los de interfaz van al `SUPUESTOS.md` del front).
+
+Se resuelven primero como `PA-*` en el Artículo 8 del spec y bajan una vez cerrada
+la feature. Formato: sección `## SPEC-00X — <nombre>`, cada supuesto en negrita
+como afirmación, el porqué a continuación y `→ archivo` cuando ayude a ubicarlo.
+El porqué es lo que importa: sin él la línea describe el código en vez de explicar
+la decisión.
+
 ## Bitácora de commits
 
 **Obligatorio: cada commit en este repo se registra acá**, en la misma tanda de
@@ -194,3 +207,4 @@ dos repos.
 | 2026-09-03 | `feature/panel-inscripciones` | Incorporar SPEC-004 (panel de inscripciones) al repositorio | Define `GET /course/enrollments/` con una sola agregación, `enrolled_count` aditivo en `GET /course/`, conteo de inscritos vigentes y separación de cursos activos/inactivos; resuelve la numeración ambigua que dejó SPEC-003 |
 | 2026-09-03 | `feature/panel-inscripciones` | Agregar tests del panel de inscripciones (SPEC-004) | 20 tests cubren CA-1..CA-16, la reversibilidad de PA-8 y `CaptureQueriesContext` contra el N+1; rojo esperado: ruta inexistente y `enrolled_count` ausente |
 | 2026-09-03 | `feature/panel-inscripciones` | Exponer el panel de inscripciones vía GET /course/enrollments/ | `ListAPIView` con `annotate(Count(..., filter=...))`, orden activos→inactivos, y `enrolled_count` aditivo en `GET /course/` con una única definición de «inscrito vigente»; verde 70/70, sin migraciones |
+| 2026-09-03 | `feature/panel-inscripciones` | Documentar los supuestos de SPEC-004 y exigirlos antes del merge | Criterio de «inscrito vigente», cursos inactivos visibles, orden server-side y agregación única; el protocolo pasa a obligar que los supuestos se escriban al cerrar la feature |
