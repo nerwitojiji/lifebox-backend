@@ -186,3 +186,4 @@ dos repos.
 | 2026-09-03 | `feature/asignar-curso` | Agregar tests de asignación de cursos (SPEC-003) | Cobertura estricta de contrato, permisos, tenant, estados, entrada hostil y duplicados visibles/ocultos; rojo esperado por ruta inexistente |
 | 2026-09-03 | `feature/asignar-curso` | Permitir asignar cursos a colaboradores vía POST | Endpoint tenant-safe, recursos activos/visibles, duplicados controlados y respuesta anidada; suite completa verde 50/50 |
 | 2026-09-03 | `dev` | Merge de feature/asignar-curso (`--no-ff`) | SPEC-003 cerrada en backend; 16 tests específicos y suite completa verde 50/50 |
+| 2026-09-03 | `feature/panel-inscripciones` | Incorporar SPEC-004 (panel de inscripciones) al repositorio | Define `GET /course/enrollments/` con una sola agregación, `enrolled_count` aditivo en `GET /course/`, conteo de inscritos vigentes y separación de cursos activos/inactivos; resuelve la numeración ambigua que dejó SPEC-003 |
