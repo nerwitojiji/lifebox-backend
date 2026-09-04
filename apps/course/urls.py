@@ -2,6 +2,7 @@ from django.urls import path
 
 from apps.course.views import (
     CourseAssignView,
+    CourseCollaboratorsView,
     CourseEnrollmentsView,
     CourseListCreateView,
 )
@@ -12,4 +13,9 @@ urlpatterns = [
     # colisión, pero el orden deja explícito que «enrollments» es una ruta fija.
     path("enrollments/", CourseEnrollmentsView.as_view(), name="course-enrollments"),
     path("<int:pk>/assign/", CourseAssignView.as_view(), name="course-assign"),
+    path(
+        "<int:pk>/collaborators/",
+        CourseCollaboratorsView.as_view(),
+        name="course-collaborators",
+    ),
 ]

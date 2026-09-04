@@ -13,22 +13,34 @@ from apps.user.models import Collaborator
 from utils.custom_permissions import IsAdmin
 
 
-# SPEC-004 RN-5: «inscrito vigente» = inscripción visible de un colaborador
-# disponible, con el mismo criterio de disponibilidad que SPEC-003 RN-5 usa para
-# admitirlo. La definición vive acá una sola vez y la comparten el listado de
-# cursos y el panel, para que los dos conteos no puedan divergir.
-VIGENTE = Q(
-    course_collaborators__show=True,
-    course_collaborators__collaborator__show=True,
-    course_collaborators__collaborator__user__show=True,
-    course_collaborators__collaborator__user__is_active=True,
-)
+# SPEC-004 RN-5 y SPEC-005 RN-5: «inscrito vigente» = inscripción visible de un
+# colaborador disponible, con el mismo criterio de disponibilidad que SPEC-003 RN-5
+# usa para admitirlo. La definición vive acá una sola vez y la comparten el listado
+# de cursos, el panel y la lista de inscritos: si el contador dice 3, la lista trae
+# 3. Cambiar el criterio cambia los tres juntos.
+INSCRITO_VIGENTE = {
+    "show": True,
+    "collaborator__show": True,
+    "collaborator__user__show": True,
+    "collaborator__user__is_active": True,
+}
+
+
+def vigente(prefix=""):
+    """El criterio, con el prefijo de la relación desde donde se lo mire.
+
+    Sin prefijo se filtra `CourseCollaborator` directo; con
+    `course_collaborators__` se lo mira desde `Course`.
+    """
+    return Q(**{f"{prefix}{campo}": valor for campo, valor in INSCRITO_VIGENTE.items()})
 
 
 def with_enrolled_count(queryset):
     """Anota `enrolled_count` con una sola agregación (SPEC-004 RN-6)."""
     return queryset.annotate(
-        enrolled_count=Count("course_collaborators", filter=VIGENTE)
+        enrolled_count=Count(
+            "course_collaborators", filter=vigente("course_collaborators__")
+        )
     )
 
 
@@ -210,3 +222,38 @@ class CourseAssignView(GenericAPIView):
 
         output = CourseAssignmentSerializer(assignment)
         return Response(output.data, status=status.HTTP_201_CREATED)
+
+
+class CourseEnrolleeSerializer(serializers.ModelSerializer):
+    collaborator = AssignedCollaboratorSerializer(read_only=True)
+
+    class Meta:
+        model = CourseCollaborator
+        fields = ["id", "assigned_at", "collaborator"]
+
+
+class CourseCollaboratorsView(ListAPIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAdmin]
+    serializer_class = CourseEnrolleeSerializer
+
+    def get_course(self):
+        # RN-3 y RN-4: el curso debe ser del tenant y visible, pero `is_active`
+        # NO se exige, a diferencia de CourseAssignView. La divergencia es
+        # deliberada: allí se crea un vínculo nuevo —y un curso retirado no admite
+        # inscripciones—, mientras que acá solo se leen los que ya existen, y un
+        # curso retirado conserva a su gente. No igualar las dos condiciones.
+        return get_object_or_404(
+            Course.objects.filter(
+                organization=self.request.user.admin_profile.organization,
+                show=True,
+            ),
+            pk=self.kwargs["pk"],
+        )
+
+    def get_queryset(self):
+        return (
+            CourseCollaborator.objects.filter(vigente(), course=self.get_course())
+            .select_related("collaborator__user")
+            .order_by("-assigned_at", "collaborator__user__first_name")
+        )
