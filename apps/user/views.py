@@ -64,6 +64,17 @@ class LoginView(APIView):
                 {"text": "Credenciales inválidas"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        # SPEC-007 RN-24: el rol se deriva de la existencia del perfil, así que
+        # sin perfil no hay rol y el front queda rebotando entre /admin y
+        # /colaborador. Se le dice, en vez de mentirle con «credenciales
+        # inválidas»: la contraseña ya la acertó, es su cuenta.
+        if not hasattr(user, "admin_profile") and not hasattr(
+            user, "collaborator_profile"
+        ):
+            return Response(
+                {"text": "Tu cuenta no tiene un perfil asociado. Contacta al administrador."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         _, token = AuthToken.objects.create(user)
         return Response(
             {
