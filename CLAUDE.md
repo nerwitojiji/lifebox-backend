@@ -63,6 +63,13 @@ de una `Organization`.
 collaborator)` — reasignar el mismo par revienta con `IntegrityError`, hay que
 manejarlo con `get_or_create` o validación en el serializer.
 
+`User.must_change_password` (SPEC-009) marca que la contraseña la eligió el
+servidor y la vio el administrador: se enciende al crear un colaborador y al
+regenerarle la contraseña, y se apaga cuando la persona pone la suya. Hizo falta
+el campo porque **`last_login` nunca se escribe** —el login usa `authenticate()`
++ Knox y no llama a `django.contrib.auth.login()`—, así que no distingue el
+primer ingreso del décimo.
+
 Todos los modelos heredan `utils.base_model.BaseAbstractModel`: `created_at`,
 `updated_at` y **`show`** (soft-delete). Dar de baja = `show=False`, nunca
 `.delete()`; y todo queryset de lectura filtra `show=True`.
@@ -128,14 +135,16 @@ Ya implementado:
 | GET | `/course/enrollments/` | `IsAdmin` — SPEC-004; panel agregado con `annotate(Count(..., filter=...))`, ordenado activos→inactivos |
 | GET | `/course/{id}/collaborators/` | `IsAdmin` — SPEC-005; inscritos vigentes de un curso, `-assigned_at` |
 | GET | `/course-collaborator/my-courses/` | `IsCollaborator` — SPEC-006; los cursos del colaborador del token, sin datos de otros |
-| GET/PATCH/DELETE | `/course/{id}/` | `IsAdmin` — SPEC-007; corregir, dar de baja (`is_active`) y eliminar (`show`). El `DELETE` responde `400` si el curso tiene inscritos vigentes |
+| GET/PATCH/DELETE | `/course/{id}/` | `IsAdmin` — SPEC-007; corregir, dar de baja (`is_active`) y eliminar (`show`). El `DELETE` responde `400` si el curso tiene inscritos vigentes. El `PATCH` acepta `version` **solo si el curso no tiene inscritos** (SPEC-008) |
 | POST | `/course/{id}/new-version/` | `IsAdmin` — SPEC-007; crea un curso nuevo con la versión pedida y deja el de origen inactivo, sin migrar inscritos |
 | DELETE | `/course/{id}/collaborators/{enrollment_id}/` | `IsAdmin` — SPEC-007; desinscribe (`show=False`); admite cursos inactivos |
 | DELETE | `/collaborator/{id}/` | `IsAdmin` — SPEC-007; da de baja: `Collaborator.show=False` **y** `user.is_active=False` en una transacción |
+| POST | `/user/change-password/` | autenticado — SPEC-009; exige la contraseña actual, invalida los demás tokens del usuario y apaga `must_change_password` |
 
-**Los cinco endpoints de SPEC-007 todavía no están declarados en
-`apiEndpoints.ts`**: son bonus, no parte del contrato original. Al implementar su
-interfaz hay que agregarlos ahí primero, que es la fuente de verdad de las rutas.
+Los endpoints de SPEC-007, SPEC-008 y SPEC-009 son **bonus**: no venían en el
+contrato original de `apiEndpoints.ts`, pero ya están declarados ahí y tienen
+interfaz. Al agregar uno nuevo, declararlo en ese archivo primero: es la fuente
+de verdad de las rutas.
 
 `GET /course/` incorpora `enrolled_count` desde SPEC-004. La definición de
 «inscrito vigente» (inscripción visible + colaborador y usuario disponibles) vive
@@ -252,3 +261,4 @@ dos repos.
 | 2026-09-05 | `feature/cambiar-contrasena` | Agregar tests de cambio de contraseña (SPEC-009) | 13 tests cubren CA-1..CA-14, repartidos entre el archivo nuevo, el de SPEC-002 (el flag al crear y al regenerar) y el de auth (el campo en login/me/verify-token); rojo esperado: 12 errores por la ruta y el campo inexistentes, más 1 fallo |
 | 2026-09-05 | `feature/cambiar-contrasena` | Permitir cambiar la contraseña | `POST /user/change-password/` para cualquier autenticado, exigiendo la actual e invalidando los demás tokens; `must_change_password` en `User` (primera migración del proyecto), encendido al crear un colaborador y al regenerarle la contraseña. Incluye `SUPUESTOS.md`; verde 173/173 |
 | 2026-09-05 | `dev` | Merge de feature/cambiar-contrasena (`--no-ff`) | **SPEC-009 cerrada en backend**; suite completa verde 173/173 |
+| 2026-09-05 | `dev` | Poner al día la guía del repo | El contrato no listaba `POST /user/change-password/` ni la condición de `version` en el `PATCH`, y el modelo de datos no explicaba `must_change_password` ni por qué `last_login` no servía |
