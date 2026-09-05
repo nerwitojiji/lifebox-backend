@@ -26,6 +26,12 @@ class User(AbstractBaseUser, PermissionsMixin, BaseAbstractModel):
     last_name = models.CharField(max_length=150, blank=True)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    # SPEC-009 RN-8: se enciende cuando la contraseña la eligió el servidor y la
+    # vio el administrador —al crear un colaborador y al regenerársela— y se apaga
+    # cuando la persona pone la suya. Vive en `User` y no en el perfil porque la
+    # contraseña es del usuario: así también sirve si alguna vez se le entrega una
+    # temporal a un administrador.
+    must_change_password = models.BooleanField(default=False)
 
     objects = UserManager()
 
