@@ -296,3 +296,4 @@ dos repos.
 | 2026-09-05 | `feature/ficha-de-curso` | Corregir el mapa de apps, que daba `course_collaborator` por vacía | Decía «views.py aún vacío» desde antes de SPEC-006; hace dos specs que esa app tiene vistas, y ahora dos |
 | 2026-09-05 | `dev` | Merge de feature/ficha-de-curso (`--no-ff`) | **SPEC-010 cerrada en backend**; 12 tests específicos y suite completa verde 185/185, sin migraciones |
 | 2026-09-05 | `dev` | Anotar el merge de feature/ficha-de-curso en la bitácora | La fila del merge, que el propio merge no puede contener |
+| 2026-09-05 | `feature/ficha-de-curso` | Anexar la Enmienda 1 de SPEC-010 al spec | La imagen deja de ser una foto al azar y pasa a buscarse por el tema del curso. Es un cambio de interfaz: acá solo se actualiza el espejo del spec, el backend no se toca y la suite sigue en 185/185 |

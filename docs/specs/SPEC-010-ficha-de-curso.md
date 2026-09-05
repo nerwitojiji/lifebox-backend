@@ -308,3 +308,141 @@ Tres cargan el peso de la spec:
 
 Se verifica que la suite completa siga verde (**173 tests** antes de esta feature) y
 que `makemigrations --check` no detecte cambios. En el frontend, `npm run build`.
+
+---
+
+# Enmienda 1 — La imagen pasa a depender del tema del curso
+
+- **Estado:** Aprobada e implementada
+- **Rama:** `feature/ficha-de-curso` (la misma; SPEC-010 no había llegado a `main`)
+- **Reemplaza:** RN-F1, RN-F2 y PA-5 · **Agrega:** RN-F11 · **Acota:** PA-7
+- **Repos:** solo `lifebox-frontend`. El backend no cambia.
+
+## Artículo 1 — Por qué
+
+SPEC-010 adoptó Lorem Picsum **sabiendo** que la imagen era arbitraria, y lo dejó
+escrito en PA-5. Puesta en pantalla, la decisión falló por una razón que el spec no
+anticipó.
+
+«Inducción de seguridad» quedó ilustrado con **un faro sobre el mar**. «Curso de
+grappling», con **un chico sentado en una ruina**. El problema no es que la imagen
+no informe: es que **contradice** al curso. Una foto adentro de la tarjeta de un
+curso se lee como si dijera algo de ese curso — nadie sabe, ni tiene por qué saber,
+que es un placeholder. Y una foto que contradice no se lee como decoración: se lee
+como un error del sistema.
+
+La premisa de PA-5 era que una imagen decorativa es inofensiva mientras no pretenda
+informar. La pantalla mostró que **sí pretende**, por dónde está puesta.
+
+Hay un segundo problema, del mismo momento: la grilla era `md=6` fija, dos tarjetas
+por fila desde 960px, siempre. En un monitor ancho eso daba imágenes de ~900px, y la
+tarjeta **no reaccionaba a cuántos cursos hay**.
+
+## Artículo 2 — Objetivo
+
+Que la imagen de un curso tenga algo que ver con su tema, y que la grilla se
+densifique cuando hay ancho para hacerlo.
+
+## Artículo 3 — Alcance
+
+**Dentro:** el origen de la imagen y la derivación de la etiqueta desde el nombre
+del curso; los breakpoints de la grilla de «Mis cursos».
+
+**Fuera:** subir una imagen propia (sigue siendo SPEC-011); que el administrador
+elija la portada; la ficha, el endpoint y cualquier cosa del backend.
+
+## Artículo 5 — Reglas de negocio
+
+- **RN-F1 (reemplaza).** La imagen DEBE pedirse a
+  `https://loremflickr.com/<ancho>/<alto>/<etiqueta>?lock=<n>`.
+- **RN-F2 (reemplaza).** DEBE viajar **una sola etiqueta**: la última palabra
+  significativa del nombre, sin acentos y en minúsculas, descartando las palabras
+  vacías del castellano, las genéricas de catálogo, los números y las de dos
+  caracteres o menos.
+  «Inducción de seguridad» → `seguridad`; «Curso de grappling» → `grappling`;
+  «Prevención de riesgos laborales» → `laborales`; «Ergonomía en oficina` →
+  `oficina`.
+- **RN-F2b.** Si el filtrado no deja ninguna palabra, DEBE usarse la última palabra
+  con letras del nombre. Si el nombre no deja ninguna, **NO DEBE pedirse imagen**:
+  va directo el respaldo local.
+- **RN-F2c.** El `lock` DEBE derivarse determinísticamente del nombre y **DEBE
+  acotarse al rango 0-9**. Ver PA-E8.
+- **RN-F2d.** Tarjeta, ficha y miniatura del admin DEBEN compartir etiqueta y
+  `lock`; lo único que puede diferir es el tamaño pedido.
+- **RN-F3 (se conserva, y pesa más).** El respaldo local ahora cubre también el
+  caso de que no exista ninguna foto para esa etiqueta, no solo la falta de red.
+- **RN-F4 (se conserva).** La imagen sigue con `alt=""` y `aria-hidden`. Ver PA-E4.
+- **RN-F11 (nueva).** La grilla de «Mis cursos» DEBE ser
+  `cols="12" sm="6" lg="4" xl="3"`.
+
+## Artículo 6 — Criterios de aceptación
+
+- **CA-E1:** «Inducción de seguridad» pide la imagen con `seguridad`.
+- **CA-E2:** «Curso de grappling» pide `grappling` — ni «curso» ni «de» viajan.
+- **CA-E3:** la misma tarjeta pide **la misma URL** en dos cargas seguidas.
+- **CA-E4:** tarjeta y ficha del mismo curso comparten etiqueta y `lock`, y solo se
+  diferencian en el tamaño.
+- **CA-E5:** un curso llamado «1234» no dispara ningún pedido de red y muestra el
+  respaldo local.
+- **CA-E6:** en `xl` entran cuatro tarjetas por fila; en `sm`, dos; en `xs`, una.
+- **CA-E7:** sin red, tarjeta y ficha siguen mostrando el respaldo local sin íconos
+  rotos ni saltos de layout (CA-F4 sigue valiendo tal cual).
+
+## Artículo 8 — Preguntas abiertas resueltas
+
+- **PA-E1: se usa LoremFlickr y no Unsplash.** `source.unsplash.com`, que era la
+  opción sin credenciales, fue dada de baja; la API oficial exige una clave que quien
+  evalúe no tiene y que no corresponde versionar. LoremFlickr sirve por etiqueta, sin
+  clave, y `?lock=` lo hace determinista.
+- **PA-E2 (corregida al implementar): va UNA etiqueta, no todas.** El spec aprobado
+  decía mandarlas todas separadas por coma, asumiendo que LoremFlickr buscaría por
+  cualquiera de ellas. **Medido: la coma es AND.** `seguridad` devuelve fotos, pero
+  `induccion,seguridad` no devuelve ninguna — exige que la foto tenga las dos
+  etiquetas a la vez, y casi ninguna las tiene. Se corrigió antes de cerrar la
+  feature.
+- **PA-E3: se elige la última palabra significativa, no la primera.** En castellano
+  el tema suele cerrar la frase: «Inducción de SEGURIDAD», «Curso de GRAPPLING»,
+  «Ergonomía en OFICINA». La primera daría `induccion`, que es la forma del curso y
+  no su tema. Y «curso» se elimina siempre: está en el nombre de casi todos y haría
+  que todos tiraran hacia la misma clase de foto.
+- **PA-E4: la imagen sigue siendo decorativa, con `alt=""`.** Que la foto se
+  relacione con el tema no la convierte en información: **nadie la eligió para este
+  curso**, y puede seguir siendo desatinada.
+- **PA-E5: el contenido no está garantizado, y se asume como límite conocido.** Las
+  fotos salen de Flickr por etiqueta, no de un catálogo curado: esta enmienda mejora
+  la probabilidad de acertar, no la certeza. Para un producto real la respuesta
+  correcta es la portada elegida por el administrador o subida como archivo
+  (SPEC-011). Se acepta acá porque el enunciado propone explícitamente apoyarse en
+  una API pública de imágenes, y porque el respaldo local cubre el caso de que no
+  haya foto.
+- **PA-E6: la tarjeta se achica con el ancho de la ventana, no con la cantidad de
+  cursos.** Dimensionar según cuántos hay haría que la misma pantalla se viera
+  distinta según a quién le asignaron más cursos, y que agregar una inscripción
+  encogiera las demás.
+- **PA-E7: no se encadena Picsum como segundo intento.** Si LoremFlickr no responde,
+  el respaldo local ya deja la pantalla completa; encadenar dos servicios externos
+  duplicaría la superficie de falla para ganar una foto que, otra vez, no tendría que
+  ver con el curso.
+- **PA-E8 (nueva): el `lock` se acota a 0-9, y aun así queda un hueco medido.** El
+  `lock` no es una semilla: es un **índice sobre el resultado de la búsqueda**. Con
+  un número alto y una etiqueta de pocas fotos, LoremFlickr se queda sin resultado y
+  sirve **su propia imagen por defecto** — y lo hace con **HTTP 200**, así que el
+  `@error` que dispara el respaldo local **no se entera**. Medido sobre las etiquetas
+  reales del proyecto: con el hash completo, `auxilios` caía siempre; en el rango 0-9
+  acierta 48 de 50. El hueco que queda es doble y se asume: hay pares
+  (etiqueta, lock) sin resultado, y en frío la primera petición puede devolver el
+  placeholder y la segunda la foto. **No se puede detectar desde el cliente**: la
+  respuesta es una imagen válida servida desde otro origen. La solución real es la
+  portada elegida por el administrador; queda anotada como el próximo paso si la
+  calidad visual pesa más que la ausencia de un campo en el modelo.
+
+## Artículo 9 — Decisiones, dependencias y referencias
+
+Toca **dos archivos del frontend**: `components/ImagenCurso.vue` (la construcción de
+la URL, la derivación de la etiqueta y el rango del `lock`) y
+`pages/colaborador/my-courses/index.vue` (los breakpoints de RN-F11). La lista de
+palabras vacías se declara **una sola vez**, en el componente.
+
+**El backend no cambia.** Sigue sin saber nada de la imagen, así que los 185 tests
+siguen valiendo tal cual y no hay migraciones. La verificación del frontend sigue
+siendo `npm run build`.
