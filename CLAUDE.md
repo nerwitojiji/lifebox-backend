@@ -47,7 +47,7 @@ academy/urls.py       monta los prefijos de URL (ver "Ruteo")
 apps/organization/    Organization — el tenant
 apps/user/            User (email como USERNAME_FIELD), Admin, Collaborator, login
 apps/course/          Course
-apps/course_collaborator/  CourseCollaborator (la inscripción); views.py aún vacío
+apps/course_collaborator/  CourseCollaborator (la inscripción) + las vistas del colaborador
 utils/                BaseAbstractModel, IsAdmin/IsCollaborator, model_factories
 docs/FILES.md         guía de uploads a MEDIA_ROOT local (sin S3/Azure)
 ```
@@ -293,3 +293,4 @@ dos repos.
 | 2026-09-05 | `feature/ficha-de-curso` | Incorporar SPEC-010 (ficha de curso) al repositorio | El enunciado §6.1 pide dar contexto antes de entrar a un curso, no imágenes: la imagen es decorativa y va por Lorem Picsum sin tocar el modelo. Lo que falta en el back es la puerta —`GET /course/{id}/` es `IsAdmin`, así que el colaborador no tiene ningún endpoint que le devuelva un curso—, y sin ella la ficha no sobrevive a una recarga |
 | 2026-09-05 | `feature/ficha-de-curso` | Agregar tests de la ficha de curso (SPEC-010) | 12 tests cubren CA-1..CA-12 en el mismo archivo que la lista, porque RN-4 obliga a que compartan criterio; CA-12 compara ficha contra lista campo por campo y cae si alguien toca un filtro de un solo lado. Rojo esperado: 12 errores por la ruta inexistente |
 | 2026-09-05 | `feature/ficha-de-curso` | Exponer la ficha de un curso asignado | `RetrieveAPIView` sobre `my-courses/{enrollment_id}/`, buscando por id de inscripción para que «solo lo suyo» sea cierto por construcción. El filtro sale de `MyCoursesView` y pasa a `mis_inscripciones()`, compartido por lista y ficha (RN-4). Incluye `SUPUESTOS.md`; verde 185/185, sin migraciones |
+| 2026-09-05 | `feature/ficha-de-curso` | Corregir el mapa de apps, que daba `course_collaborator` por vacía | Decía «views.py aún vacío» desde antes de SPEC-006; hace dos specs que esa app tiene vistas, y ahora dos |
