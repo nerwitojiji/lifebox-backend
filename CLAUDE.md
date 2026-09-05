@@ -297,3 +297,5 @@ dos repos.
 | 2026-09-05 | `dev` | Merge de feature/ficha-de-curso (`--no-ff`) | **SPEC-010 cerrada en backend**; 12 tests específicos y suite completa verde 185/185, sin migraciones |
 | 2026-09-05 | `dev` | Anotar el merge de feature/ficha-de-curso en la bitácora | La fila del merge, que el propio merge no puede contener |
 | 2026-09-05 | `feature/ficha-de-curso` | Anexar la Enmienda 1 de SPEC-010 al spec | La imagen deja de ser una foto al azar y pasa a buscarse por el tema del curso. Es un cambio de interfaz: acá solo se actualiza el espejo del spec, el backend no se toca y la suite sigue en 185/185 |
+| 2026-09-05 | `dev` | Merge de la Enmienda 1 de SPEC-010 (`--no-ff`) | Solo el espejo del spec; el cambio vive en el frontend. El merge tuvo conflicto en este archivo —las dos ramas agregaron filas al final de la tabla— y se resolvió conservando ambas |
+| 2026-09-05 | `dev` | Anotar el merge de la Enmienda 1 en la bitácora | La fila del merge, que el propio merge no puede contener |
