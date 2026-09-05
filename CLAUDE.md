@@ -168,6 +168,10 @@ condiciones.
 **No queda ningún endpoint pendiente del contrato del front**: todo lo declarado en
 `apiEndpoints.ts` está implementado.
 
+La Enmienda 2 de SPEC-010 retira las fotos externas del frontend y deja una ficha
+compacta con iniciales locales. Acá solo se actualiza el espejo del spec: no hay
+cambios de API ni de modelo. El material real de la ficha queda para SPEC-011.
+
 Header de auth: `Authorization: Token <token>`.
 Login inválido responde `400` con `{"text": "Credenciales inválidas"}` — el front
 lee exactamente `err.data.text`, mantener esa forma en los errores de auth.
@@ -299,3 +303,4 @@ dos repos.
 | 2026-09-05 | `feature/ficha-de-curso` | Anexar la Enmienda 1 de SPEC-010 al spec | La imagen deja de ser una foto al azar y pasa a buscarse por el tema del curso. Es un cambio de interfaz: acá solo se actualiza el espejo del spec, el backend no se toca y la suite sigue en 185/185 |
 | 2026-09-05 | `dev` | Merge de la Enmienda 1 de SPEC-010 (`--no-ff`) | Solo el espejo del spec; el cambio vive en el frontend. El merge tuvo conflicto en este archivo —las dos ramas agregaron filas al final de la tabla— y se resolvió conservando ambas |
 | 2026-09-05 | `dev` | Anotar el merge de la Enmienda 1 en la bitácora | La fila del merge, que el propio merge no puede contener |
+| 2026-09-05 | `feature/iniciales-de-curso` | Reflejar la Enmienda 2 de SPEC-010 en el contexto del backend | Espejo del spec: iniciales locales y ficha compacta en el frontend; API y modelo sin cambios. Material pendiente para SPEC-011 |
