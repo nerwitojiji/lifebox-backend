@@ -84,8 +84,16 @@ class EditCourseTests(APITestCase):
         self.assertEqual(self.course_a.description, "Corregido")
         self.assertEqual(self.course_a.duration_hours, 8)
 
-    def test_patch_ignora_la_version_del_body(self):
-        """CA-2: RN-4 — la versión solo cambia publicando una versión nueva."""
+    def test_patch_corrige_la_version_de_un_curso_sin_inscritos(self):
+        """SPEC-008 RN-1 acota SPEC-007 RN-4 y CA-2.
+
+        Este test afirmaba que el `PATCH` ignoraba la versión del body, sin
+        excepción. La regla era correcta mientras la única lectura posible fuera
+        «versionar», pero dejaba fuera el caso de corregir un tipeo antes de que
+        nadie se inscribiera, que el enunciado nombra explícitamente. Con
+        inscritos, la prohibición sigue en pie y la cubre
+        `test_no_se_corrige_la_version_con_inscritos`.
+        """
         self.authenticate("admin.a@test.com")
 
         response = self.client.patch(
@@ -96,7 +104,7 @@ class EditCourseTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.course_a.refresh_from_db()
-        self.assertEqual(self.course_a.version, "1.0")
+        self.assertEqual(self.course_a.version, "9.9")
         self.assertEqual(self.course_a.full_name, "Nombre corregido")
 
     def test_patch_ignora_los_campos_de_control(self):
@@ -269,6 +277,144 @@ class EditCourseTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.course_a.refresh_from_db()
         self.assertFalse(self.course_a.show)
+
+    # -- SPEC-008: corregir la versión ---------------------------------------
+
+    def test_corregir_la_version_de_un_curso_sin_inscritos(self):
+        """CA-1: RN-1 — nadie lo curso todavia, corregir no le miente a nadie."""
+        self.authenticate("admin.a@test.com")
+
+        response = self.client.patch(self.url(), {"version": "2.0"}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["version"], "2.0")
+        self.course_a.refresh_from_db()
+        self.assertEqual(self.course_a.version, "2.0")
+
+    def test_no_se_corrige_la_version_con_inscritos(self):
+        """CA-2 y CA-10: RN-1 — con gente inscrita, la versión es parte de lo que
+        esas personas cursaron. Es la regla de SPEC-007 que se conserva."""
+        self.enroll()
+        self.authenticate("admin.a@test.com")
+
+        response = self.client.patch(self.url(), {"version": "2.0"}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("version", response.data)
+        mensaje = " ".join(str(m) for m in response.data["version"]).lower()
+        self.assertIn("inscrito", mensaje)
+        self.assertIn("versión nueva", mensaje)
+        self.course_a.refresh_from_db()
+        self.assertEqual(self.course_a.version, "1.0")
+
+    def test_reenviar_la_misma_version_no_es_error(self):
+        """CA-3: RN-2 — no es un cambio; fallar acá sería una trampa de
+        integración para un cliente que manda el objeto completo."""
+        self.enroll()
+        self.authenticate("admin.a@test.com")
+
+        for valor in ["1.0", "  1.0  "]:
+            with self.subTest(valor=valor):
+                response = self.client.patch(
+                    self.url(),
+                    {"full_name": "Prevención de riesgos", "version": valor},
+                    format="json",
+                )
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.course_a.refresh_from_db()
+        self.assertEqual(self.course_a.version, "1.0")
+
+    def test_la_version_corregida_pasa_la_misma_validacion(self):
+        """CA-4: RN-3 — el piso de `version` no depende de por dónde entre."""
+        self.authenticate("admin.a@test.com")
+
+        for valor in ["", ".", "--"]:
+            with self.subTest(valor=valor):
+                response = self.client.patch(
+                    self.url(), {"version": valor}, format="json"
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn("version", response.data)
+
+        self.course_a.refresh_from_db()
+        self.assertEqual(self.course_a.version, "1.0")
+
+    def test_no_se_corrige_a_una_version_ya_usada(self):
+        """CA-5: RN-4 — «cursó la 2.0» tiene que identificar un contenido."""
+        Course.objects.create(
+            full_name="Prevención de riesgos",
+            version="2.0",
+            organization=self.org_a,
+        )
+        self.authenticate("admin.a@test.com")
+
+        response = self.client.patch(self.url(), {"version": "2.0"}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("version", response.data)
+
+    def test_desinscribir_devuelve_la_posibilidad_de_corregir(self):
+        """CA-6: PA-2 — la condición es «hay historial que proteger», no «el
+        curso es nuevo». Si el contador dice 0, no hay a quién mentirle."""
+        inscripcion = self.enroll()
+        self.authenticate("admin.a@test.com")
+
+        bloqueado = self.client.patch(self.url(), {"version": "2.0"}, format="json")
+        self.assertEqual(bloqueado.status_code, status.HTTP_400_BAD_REQUEST)
+
+        inscripcion.show = False
+        inscripcion.save()
+
+        permitido = self.client.patch(self.url(), {"version": "2.0"}, format="json")
+        self.assertEqual(permitido.status_code, status.HTTP_200_OK)
+        self.course_a.refresh_from_db()
+        self.assertEqual(self.course_a.version, "2.0")
+
+    def test_un_colaborador_dado_de_baja_tampoco_bloquea(self):
+        """CA-7: PA-2 — mismo criterio de «inscrito vigente» que el contador."""
+        self.enroll()
+        self.collaborator_a.show = False
+        self.collaborator_a.save()
+        self.collaborator_a.user.is_active = False
+        self.collaborator_a.user.save()
+        self.authenticate("admin.a@test.com")
+
+        response = self.client.patch(self.url(), {"version": "2.0"}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.course_a.refresh_from_db()
+        self.assertEqual(self.course_a.version, "2.0")
+
+    def test_corregir_la_version_no_toca_nada_mas(self):
+        """CA-8 y CA-9: RN-5 — es una edición, no una publicación."""
+        self.authenticate("admin.a@test.com")
+        cursos_antes = Course.objects.count()
+
+        response = self.client.patch(self.url(), {"version": "2.0"}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(Course.objects.count(), cursos_antes)
+        self.course_a.refresh_from_db()
+        self.assertEqual(self.course_a.full_name, "Prevención de riesgos")
+        self.assertEqual(self.course_a.description, "Curso base")
+        self.assertEqual(self.course_a.duration_hours, 4)
+        self.assertTrue(self.course_a.is_active)
+
+    def test_publicar_version_sigue_funcionando_sin_inscritos(self):
+        """CA-9: PA-6 — los dos caminos conviven; el sistema no elige por el
+        administrador cuál corresponde."""
+        self.authenticate("admin.a@test.com")
+
+        response = self.client.post(
+            reverse("course-new-version", kwargs={"pk": self.course_a.pk}),
+            {"version": "2.0"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.course_a.refresh_from_db()
+        self.assertFalse(self.course_a.is_active)
 
     # -- permisos -------------------------------------------------------------
 
