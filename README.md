@@ -95,6 +95,35 @@ Base de datos: SQLite por defecto (`db.sqlite3`, se crea al migrar). No es oblig
 | Colaborador | `colaborador1@lifebox.test` | `password123` |
 | Colaborador | `colaborador2@lifebox.test` | `password123` |
 
+## Demostrar el flujo en 5 pasos
+
+Con este API corriendo (`make runserver`) y el Frontend en `http://localhost:3000`
+(ver su README). El recorrido completo se hace por la interfaz.
+
+1. **Entrar como administrador**: `admin@lifebox.test` / `password123`.
+2. **Crear un curso** en **Cursos → Nuevo curso**, con nombre, descripción, duración
+   aproximada en horas y versión (por ejemplo `1.0.1`).
+3. **Subirle material**: abrir el nombre del curso en la tabla (o **Ver ficha**) y
+   usar **Agregar PDF**, un archivo por operación. Hay dos de ejemplo listos en
+   [`docs/demo/`](docs/demo/): [la guía](docs/demo/guia-del-curso.pdf) y
+   [la actividad](docs/demo/actividad-de-repaso.pdf). Máximo 10 MiB, sin cifrado.
+4. **Crear un colaborador** en **Colaboradores → Nuevo colaborador**, con nombre y
+   correo. El servidor genera su contraseña temporal y la muestra **una sola vez**:
+   copiarla antes de cerrar el diálogo. Si se pierde, el admin la regenera desde la
+   misma pantalla — ver [SUPUESTOS.md](SUPUESTOS.md).
+5. **Inscribirlo** en **Inscripciones → Inscribir colaborador**, eligiendo el curso y
+   la persona. Esa misma pantalla es el panel: nombre, versión y cantidad de
+   inscritos por curso, todo junto, sin entrar curso por curso. Después, **cerrar
+   sesión e ingresar como ese colaborador** con su contraseña temporal (o con
+   `colaborador1@lifebox.test` / `password123`): en **Mis cursos** ve solo los cursos
+   que le asignaron y, al abrir la tarjeta, lee y descarga los PDFs del paso 3.
+
+Probado en **Windows**, con Python 3.13.3 y SQLite.
+
+El resto del bonus —reemplazar y quitar documentos, corregir la versión, dar de
+baja— está en [Demostrar el material PDF](#demostrar-el-material-pdf-bonus) y
+enumerado en [MEJORAS.md](MEJORAS.md).
+
 ## Endpoints disponibles
 
 Header de autenticación: `Authorization: Token <token>`.
@@ -162,7 +191,7 @@ make test
 
 Ver [docs/FILES.md](docs/FILES.md) para `MEDIA_ROOT` y uploads.
 
-## Probar material de curso
+## Demostrar el material PDF (bonus)
 
 Tras actualizar el repositorio, ejecutar `pip install -r requirements.txt` y
 `python manage.py migrate`. La nueva tabla es `CourseMaterial`; los archivos
