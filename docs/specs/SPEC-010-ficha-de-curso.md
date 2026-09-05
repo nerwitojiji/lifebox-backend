@@ -2,8 +2,8 @@
 
 - **Capacidad:** Contexto del curso para el colaborador
 - **Feature:** Ficha de curso · rama `feature/ficha-de-curso`
-- **Estado:** Propuesta
-- **Repos:** `lifebox-backend` (endpoint) · `lifebox-frontend` (ficha, tarjetas, imagen)
+- **Estado:** Implementada; alcance visual actualizado por la Enmienda 2
+- **Repos:** `lifebox-backend` (endpoint) · `lifebox-frontend` (ficha, tarjetas, iniciales)
 - **Responde a:** enunciado §6.1 — *«No sé bien de qué trata el curso antes de entrar.»*
 
 > Vocabulario normativo (RFC 2119): **DEBE / NO DEBE / DEBERÍA / PODRÍA**.
@@ -446,3 +446,89 @@ palabras vacías se declara **una sola vez**, en el componente.
 **El backend no cambia.** Sigue sin saber nada de la imagen, así que los 185 tests
 siguen valiendo tal cual y no hay migraciones. La verificación del frontend sigue
 siendo `npm run build`.
+
+---
+
+# Enmienda 2 — Iniciales locales y ficha sin portada
+
+## Artículo 1 — Contexto y encuadre
+
+Las fotos por etiqueta siguen sin representar al curso y la portada grande
+desplaza su información. Se retira la integración de imágenes externas y se
+conservan la ficha, sus enlaces, la descripción completa y la grilla adaptable.
+Esta enmienda reemplaza las reglas visuales de imágenes del spec original y
+de la Enmienda 1; RN-F5, RN-F7, RN-F8, RN-F10 y RN-F11 siguen vigentes.
+
+## Artículo 2 — Objetivo
+
+Identificar cada curso con iniciales locales y dar prioridad a su información.
+
+## Artículo 3 — Alcance
+
+Incluye las tarjetas de «Mis cursos», la ficha del colaborador y el catálogo del
+administrador. Archivos, videos y audio quedan para SPEC-011; esta enmienda NO DEBE
+agregar material, controles de carga ni espacios vacíos que anuncien esa feature.
+
+## Artículo 4 — Actores y precondiciones
+
+Colaboradores con cursos asignados y administradores con acceso al catálogo.
+Se mantienen las condiciones de acceso y visibilidad de SPEC-010.
+
+## Artículo 5 — Reglas de negocio
+
+- **RN-I1.** La identidad visual DEBE generarse localmente, sin fotos, URLs de
+  imágenes externas ni peticiones a proveedores de imágenes.
+- **RN-I2.** Las iniciales DEBEN salir de las primeras dos palabras significativas
+  de `full_name`, omitiendo conectores y términos de catálogo como «curso»,
+  «taller», «módulo» y «nivel». Una sola palabra significativa DEBE dar una inicial.
+  La comparación DEBE ignorar mayúsculas y acentos, conservando las letras
+  originales al mostrarlas en mayúsculas. Si el filtro descarta todo, DEBEN usarse
+  las primeras dos palabras con letras; sin letras, DEBE mostrarse «?».
+- **RN-I3.** Un componente compartido DEBE mostrar las iniciales en un avatar
+  compacto, con fondo tonal y color primario del tema. DEBE acompañarse siempre
+  del nombre completo y ocultarse a lectores de pantalla por ser redundante.
+- **RN-I4.** La ficha DEBE comenzar con un encabezado compacto: iniciales, nombre y
+  versión. NO DEBE contener una portada grande ni un bloque que reserve su altura.
+  DEBE conservar duración, fecha de asignación, descripción completa y aviso de
+  curso retirado.
+- **RN-I5.** La grilla DEBE conservar sus columnas adaptables (1/2/3/4 según ancho),
+  las tarjetas enlazadas y sus descripciones recortadas a tres líneas.
+
+## Artículo 6 — Criterios de aceptación
+
+- **CA-I1.** «Inducción de seguridad» muestra «IS», «curso de grappling» muestra
+  «G» y «Primeros auxilios» muestra «PA», de forma consistente en las tres vistas.
+- **CA-I2.** Un nombre con acentos, puntuación o espacios repetidos produce
+  iniciales legibles. «Curso» muestra «C» y un nombre sin letras muestra «?».
+- **CA-I3.** Las tres vistas no incluyen fotos ni generan solicitudes a proveedores
+  de imágenes. Recargar no cambia las iniciales de un mismo nombre.
+- **CA-I4.** Abrir una ficha muestra su encabezado y descripción sin una portada
+  grande. Los enlaces directos, los estados de error y los avisos se conservan.
+- **CA-I5.** La grilla mantiene los breakpoints de RN-I5 y la tarjeta completa
+  sigue siendo un enlace.
+- **CA-I6.** El build de producción de Nuxt termina correctamente (`npm run
+  build`; con un dev abierto se puede usar el mismo comando de Nuxt con directorios
+  de generación y salida aislados).
+
+## Artículo 7 — Contrato de interfaz
+
+`InicialesCurso.vue` recibe `nombre: string` y un `size?: number`, con 48 px por
+defecto. La ficha usa 56 px y el catálogo 40 px. No cambian endpoints ni respuestas.
+
+## Artículo 8 — Preguntas abiertas resueltas
+
+- **PA-I1.** Se retiran las fotos externas: la búsqueda temática no garantiza
+  correspondencia y las iniciales son estables sin depender de un tercero.
+- **PA-I2.** Las iniciales son compactas incluso en las tarjetas: ampliar letras
+  hasta ocupar una portada volvería a desplazar la información útil.
+- **PA-I3.** El material real vivirá en la ficha con SPEC-011. Su formato y
+  presentación se decidirán en esa feature; no se anticipa un reproductor ni se
+  compromete una portada elegida por el administrador.
+
+## Artículo 9 — Decisiones, dependencias y referencias
+
+Se reemplaza `ImagenCurso.vue` por `InicialesCurso.vue` y se actualizan sus tres
+consumidores. Se mantienen Vuetify, los layouts, el store y el acceso existente a
+la API. No hay cambios de backend, migraciones ni dependencias nuevas. El spec se
+mantiene idéntico en ambos repos y los supuestos de interfaz bajan a
+`lifebox-frontend/SUPUESTOS.md`.
