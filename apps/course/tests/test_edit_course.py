@@ -84,8 +84,16 @@ class EditCourseTests(APITestCase):
         self.assertEqual(self.course_a.description, "Corregido")
         self.assertEqual(self.course_a.duration_hours, 8)
 
-    def test_patch_ignora_la_version_del_body(self):
-        """CA-2: RN-4 — la versión solo cambia publicando una versión nueva."""
+    def test_patch_corrige_la_version_de_un_curso_sin_inscritos(self):
+        """SPEC-008 RN-1 acota SPEC-007 RN-4 y CA-2.
+
+        Este test afirmaba que el `PATCH` ignoraba la versión del body, sin
+        excepción. La regla era correcta mientras la única lectura posible fuera
+        «versionar», pero dejaba fuera el caso de corregir un tipeo antes de que
+        nadie se inscribiera, que el enunciado nombra explícitamente. Con
+        inscritos, la prohibición sigue en pie y la cubre
+        `test_no_se_corrige_la_version_con_inscritos`.
+        """
         self.authenticate("admin.a@test.com")
 
         response = self.client.patch(
@@ -96,7 +104,7 @@ class EditCourseTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.course_a.refresh_from_db()
-        self.assertEqual(self.course_a.version, "1.0")
+        self.assertEqual(self.course_a.version, "9.9")
         self.assertEqual(self.course_a.full_name, "Nombre corregido")
 
     def test_patch_ignora_los_campos_de_control(self):
