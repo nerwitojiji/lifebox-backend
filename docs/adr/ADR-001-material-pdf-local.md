@@ -1,6 +1,6 @@
 # ADR-001 — PDFs locales con entrega autenticada y visor compartido
 
-- **Estado:** Propuesto, sujeto a aprobación de SPEC-011
+- **Estado:** Aceptado con SPEC-011
 - **Fecha:** 2026-09-05
 - **Relacionado:** SPEC-011 — Material PDF y ficha compartida
 
@@ -14,7 +14,7 @@ La guía de uploads incluye servir `MEDIA_ROOT` con una ruta estática de desarr
 Eso no ejecuta los permisos de la ficha. La autorización debe acompañar también
 a la entrega de cada archivo.
 
-## Decisiones propuestas
+## Decisiones
 
 ### Modelo y almacenamiento
 
@@ -45,8 +45,7 @@ Usar un serializer de subida en el módulo de vistas del dominio y
 `FILE_UPLOAD_MAX_MEMORY_SIZE` regula el uso de memoria y no sustituye el límite
 de tamaño del material.
 
-Proponer `pypdf` como única dependencia nueva del backend, con versión fijada al
-implementar. Comprobar extensión, tamaño y cabecera, y luego leer la estructura
+Usar `pypdf==6.17.0` como única dependencia nueva del backend. Comprobar extensión, tamaño y cabecera, y luego leer la estructura
 con `PdfReader` en modo estricto. Rechazar cifrado y exigir al menos una página.
 El MIME declarado por el cliente no demuestra que los bytes sean un PDF.
 

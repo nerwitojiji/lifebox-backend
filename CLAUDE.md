@@ -227,7 +227,7 @@ pendiente»— es candidata a quedar falsa. Releerlas al cerrar cada feature.
 Una funcionalidad **sin spec** obliga igual, y más: no hay un documento aparte
 donde quede la decisión.
 
-## SPEC-011 — propuesta pendiente de aprobación
+## SPEC-011 — aprobada, en implementación
 
 El usuario eligió **varios PDFs por curso** y una ficha para que el admin pueda
 revisar el mismo contenido que el colaborador. La propuesta vive en
@@ -319,3 +319,4 @@ dos repos.
 | 2026-09-05 | `feature/iniciales-de-curso` | Reflejar la Enmienda 2 de SPEC-010 en el contexto del backend | Espejo del spec: iniciales locales y ficha compacta en el frontend; API y modelo sin cambios. Material pendiente para SPEC-011 |
 | 2026-09-05 | `dev` | Merge de feature/iniciales-de-curso | Enmienda 2 de SPEC-010 integrada con `--no-ff`: iniciales locales, ficha compacta y material reservado para SPEC-011 |
 | 2026-09-05 | `feature/material-pdf` | Proponer SPEC-011 de material PDF y ficha compartida | Spec de nueve artículos y ADR: varios PDFs por curso, gestión individual del admin y ficha/visor compartidos. Propuesta pendiente de aprobación; sin cambios de implementación |
+| 2026-09-05 | `feature/material-pdf` | Agregar tests de material PDF (SPEC-011) | Spec aprobada; pypdf 6.17.0 y 28 tests de API con PDFs reales, permisos, archivos privados, reemplazo y fallos de disco/base. Rojo esperado: rutas aún inexistentes |

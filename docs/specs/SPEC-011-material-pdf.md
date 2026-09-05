@@ -2,7 +2,7 @@
 
 - **Capacidad:** Publicar material de un curso y revisarlo desde ambos roles
 - **Feature:** Material PDF · rama `feature/material-pdf`
-- **Estado:** Propuesta — pendiente de aprobación antes de implementar
+- **Estado:** Aprobada por el usuario — en implementación
 - **Repos:** `lifebox-backend` · `lifebox-frontend`
 - **Responde a:** enunciado §6.2 y pedido de que el admin pueda revisar la ficha que ve el colaborador
 - **Formato elegido por el usuario:** PDF
@@ -259,16 +259,16 @@ controlado. Los errores de autenticación conservan el contrato existente.
 - **PA-1 — resuelta por el usuario:** varios PDFs por curso. Cada documento puede
   reemplazarse o quitarse sin tocar los demás. Se sube un archivo por operación
   para que sus errores y resultado sean inequívocos; no hay carga por lotes.
-- **PA-2 — resuelta como propuesta:** máximo 10 MiB y PDFs sin cifrado.
+- **PA-2 — resuelta y aprobada:** máximo 10 MiB y PDFs sin cifrado.
   Acota el tiempo de subida y carga; no se añade un segundo flujo de contraseñas.
-- **PA-3 — resuelta como propuesta:** subir publica de inmediato. El admin revisa
+- **PA-3 — resuelta y aprobada:** subir publica de inmediato. El admin revisa
   lo que está guardado; no se introduce un estado de borrador separado.
-- **PA-4 — resuelta como propuesta:** reemplazar es una corrección de material y
+- **PA-4 — resuelta y aprobada:** reemplazar es una corrección de material y
   afecta a los inscritos de esa versión. No cambia por sí solo el número de
   versión; para otro contenido formativo se usa la nueva versión existente.
-- **PA-5 — resuelta como propuesta:** la nueva versión empieza sin PDF.
+- **PA-5 — resuelta y aprobada:** la nueva versión empieza sin PDF.
   Evita heredar material anterior sin que el admin lo elija conscientemente.
-- **PA-6 — resuelta como propuesta:** quitar usa borrado lógico. No se agrega una
+- **PA-6 — resuelta y aprobada:** quitar usa borrado lógico. No se agrega una
   pantalla de recuperación ni un historial de archivos reemplazados. Agregar otro
   archivo, incluso con el mismo nombre, crea otro id; reemplazar es la acción que
   conserva id y posición. Dos documentos pueden compartir nombre sin sobrescribirse.
@@ -277,11 +277,11 @@ controlado. Los errores de autenticación conservan el contrato existente.
   admin de SPEC-010 Artículo 3 y PA-9.
 - **PA-8 — resuelta:** mismo contenido no significa suplantar al colaborador.
   No se cambia la sesión ni se inventa fecha de asignación.
-- **PA-9 — resuelta como propuesta:** se permite descargar. Es una alternativa
+- **PA-9 — resuelta y aprobada:** se permite descargar. Es una alternativa
   concreta cuando el navegador no muestra el PDF dentro de la ficha.
 - **PA-10 — resuelta:** el almacenamiento es local, como pide la guía del repo,
   con entrega autenticada. No se requieren cuentas ni credenciales externas.
-- **PA-11 — resuelta como propuesta:** orden de subida, de más antiguo a más
+- **PA-11 — resuelta y aprobada:** orden de subida, de más antiguo a más
   reciente, para que el admin arme una secuencia sencilla. Un único visor muestra
   el seleccionado: abrir la ficha no debe descargar varios PDFs de 10 MiB a la vez.
 
