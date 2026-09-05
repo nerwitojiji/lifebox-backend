@@ -111,6 +111,7 @@ class MyCoursesTests(APITestCase):
                 "duration_hours": 4,
                 "version": "2.0",
                 "is_active": True,
+                "materials": [],  # SPEC-011: todavía no se subieron PDFs.
             },
         )
 
@@ -369,6 +370,7 @@ class MyCourseDetailTests(APITestCase):
                 "duration_hours": 4,
                 "version": "2.0",
                 "is_active": True,
+                "materials": [],  # SPEC-011: todavía no se subieron PDFs.
             },
         )
 

@@ -388,6 +388,7 @@ class CourseListEnrolledCountTests(APITestCase):
                 "is_active",
                 "created_at",
                 "enrolled_count",
+                "materials",
             },
         )
 

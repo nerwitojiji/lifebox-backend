@@ -1,13 +1,17 @@
+from django.shortcuts import get_object_or_404
 from knox.auth import TokenAuthentication
 from rest_framework import serializers
-from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.generics import GenericAPIView, ListAPIView, RetrieveAPIView
 
-from apps.course.models import Course
+from apps.course.material_views import (
+    CourseWithMaterialsSerializer, with_materials, material_file_response,
+)
+from apps.course.models import Course, CourseMaterial
 from apps.course_collaborator.models import CourseCollaborator
 from utils.custom_permissions import IsCollaborator
 
 
-class MyCourseSerializer(serializers.ModelSerializer):
+class MyCourseSerializer(CourseWithMaterialsSerializer):
     class Meta:
         model = Course
         # Sin enrolled_count ni nada de otros inscritos (SPEC-006 RN-8): cuántos
@@ -20,6 +24,7 @@ class MyCourseSerializer(serializers.ModelSerializer):
             "duration_hours",
             "version",
             "is_active",
+            "materials",
         ]
 
 
@@ -42,7 +47,7 @@ def mis_inscripciones(collaborator):
     SPEC-006 RN-2: el colaborador llega como argumento y sale del token en la
     vista; acá no se lee nada de la petición.
     """
-    return CourseCollaborator.objects.filter(
+    return with_materials(CourseCollaborator.objects.filter(
         collaborator=collaborator,
         show=True,
         course__show=True,
@@ -53,7 +58,7 @@ def mis_inscripciones(collaborator):
         # curso retirado no desinscribe a nadie y quien lo tenía asignado
         # conserva la obligación; se muestra marcado para que la interfaz lo
         # distinga, tanto en la lista como en la ficha.
-    ).select_related("course")
+    ).select_related("course"), prefix="course__")
 
 
 class MyCoursesView(ListAPIView):
@@ -88,3 +93,18 @@ class MyCourseDetailView(RetrieveAPIView):
 
     def get_queryset(self):
         return mis_inscripciones(self.request.user.collaborator_profile)
+
+
+class MyCourseMaterialFileView(GenericAPIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsCollaborator]
+
+    def get(self, request, *args, **kwargs):
+        enrollment = get_object_or_404(
+            mis_inscripciones(request.user.collaborator_profile), pk=self.kwargs["pk"]
+        )
+        material = get_object_or_404(
+            CourseMaterial.objects.filter(course_id=enrollment.course_id, show=True),
+            pk=self.kwargs["material_id"],
+        )
+        return material_file_response(material)

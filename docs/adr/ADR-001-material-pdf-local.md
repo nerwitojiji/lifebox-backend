@@ -10,7 +10,7 @@ El usuario eligió varios PDFs por curso, gestionados por el administrador y
 consultados por colaboradores inscritos. El proyecto ya usa Django/DRF/Knox y
 almacenamiento local; no tiene una biblioteca de archivos ni servicios externos.
 
-La guía de uploads incluye servir `MEDIA_ROOT` con una ruta estática de desarrollo.
+La guía original de uploads incluía servir `MEDIA_ROOT` con una ruta estática de desarrollo.
 Eso no ejecuta los permisos de la ficha. La autorización debe acompañar también
 a la entrega de cada archivo.
 

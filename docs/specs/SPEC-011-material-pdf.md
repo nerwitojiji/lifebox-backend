@@ -2,7 +2,7 @@
 
 - **Capacidad:** Publicar material de un curso y revisarlo desde ambos roles
 - **Feature:** Material PDF · rama `feature/material-pdf`
-- **Estado:** Aprobada por el usuario — en implementación
+- **Estado:** Implementada y verificada
 - **Repos:** `lifebox-backend` · `lifebox-frontend`
 - **Responde a:** enunciado §6.2 y pedido de que el admin pueda revisar la ficha que ve el colaborador
 - **Formato elegido por el usuario:** PDF

@@ -1,0 +1,81 @@
+%PDF-1.3
+%‚„œ”
+1 0 obj
+<<
+/Producer (pypdf)
+/Title (Actividad de repaso)
+/Author (Lifebox Academy \204 demostraci\363n)
+>>
+endobj
+2 0 obj
+<<
+/Type /Pages
+/Count 1
+/Kids [ 4 0 R ]
+>>
+endobj
+3 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+4 0 obj
+<<
+/Type /Page
+/Resources <<
+/Font <<
+/F1 5 0 R
+>>
+>>
+/MediaBox [ 0.0 0.0 595 842 ]
+/Parent 2 0 R
+/Contents 6 0 R
+>>
+endobj
+5 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+/Encoding /WinAnsiEncoding
+>>
+endobj
+6 0 obj
+<<
+/Length 434
+>>
+stream
+0.043 0.431 0.310 rg
+BT /F1 23 Tf 50 765 Td (Actividad de repaso) Tj ET
+0.12 0.16 0.15 rg
+BT /F1 12 Tf 50 710 Td 22 TL
+(Lifebox Academy ó documento de demostraciÛn) Tj T*
+() Tj T*
+(Comprueba lo que puedes hacer desde la ficha:) Tj T*
+() Tj T*
+(- Identificar el nombre y la versiÛn del curso.) Tj T*
+(- Seleccionar cada documento de la lista.) Tj T*
+(- Descargar un PDF y abrirlo con tu lector.) Tj T*
+(- Volver a Mis cursos.) Tj T*
+ET
+endstream
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000015 00000 n 
+0000000130 00000 n 
+0000000189 00000 n 
+0000000238 00000 n 
+0000000370 00000 n 
+0000000467 00000 n 
+trailer
+<<
+/Size 7
+/Root 3 0 R
+/Info 1 0 R
+>>
+startxref
+952
+%%EOF
