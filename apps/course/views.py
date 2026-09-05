@@ -13,6 +13,7 @@ from rest_framework.generics import (
 from rest_framework.response import Response
 from rest_framework import status
 
+from apps.course.material_views import CourseWithMaterialsSerializer, with_materials
 from apps.course.models import Course
 from apps.course_collaborator.models import CourseCollaborator
 from apps.user.models import Collaborator
@@ -82,7 +83,7 @@ def campo_nombre_de_curso(**kwargs):
     )
 
 
-class CourseListSerializer(serializers.ModelSerializer):
+class CourseListSerializer(CourseWithMaterialsSerializer):
     enrolled_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -95,11 +96,12 @@ class CourseListSerializer(serializers.ModelSerializer):
             "version",
             "is_active",
             "created_at",
+            "materials",
             "enrolled_count",
         ]
 
 
-class CourseCreateSerializer(serializers.ModelSerializer):
+class CourseCreateSerializer(CourseWithMaterialsSerializer):
     # El modelo usa PositiveIntegerField, que acepta 0; el mínimo de 1 es la
     # validación añadida que pide RN-5.
     duration_hours = serializers.IntegerField(min_value=1, required=False)
@@ -115,6 +117,7 @@ class CourseCreateSerializer(serializers.ModelSerializer):
             "version",
             "is_active",
             "created_at",
+            "materials",
         ]
         # is_active y created_at se exponen para cumplir el contrato de respuesta
         # (RN-9), pero no se aceptan como entrada: el curso nace activo (RN-8).
@@ -134,12 +137,12 @@ class CourseListCreateView(ListCreateAPIView):
         return self.request.user.admin_profile.organization
 
     def get_queryset(self):
-        return with_enrolled_count(
+        return with_materials(with_enrolled_count(
             Course.objects.filter(
                 organization=self.get_organization(),
                 show=True,
             )
-        ).order_by("-created_at")
+        )).order_by("-created_at")
 
     def perform_create(self, serializer):
         # RN-4: la organización se deriva del admin autenticado. El serializer no
@@ -147,10 +150,10 @@ class CourseListCreateView(ListCreateAPIView):
         serializer.save(organization=self.get_organization())
 
 
-class CourseDetailSerializer(serializers.ModelSerializer):
-    """SPEC-007 RN-3: lo escribible es exactamente nombre, descripción,
-    duración y estado. `version` viaja de salida pero es de solo lectura: la
-    versión cambia publicando una versión nueva (RN-4), no editando el campo.
+class CourseDetailSerializer(CourseWithMaterialsSerializer):
+    """Nombre, descripción, duración y estado se corrigen en la ficha.
+    SPEC-008 permite corregir la versión solo cuando no hay inscritos;
+    los metadatos de SPEC-011 se gestionan mediante las rutas de material.
     """
 
     full_name = campo_nombre_de_curso(required=False)
@@ -172,6 +175,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
             "version",
             "is_active",
             "created_at",
+            "materials",
             "enrolled_count",
         ]
         read_only_fields = ["id", "created_at"]
@@ -236,12 +240,12 @@ class CourseDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         # RN-2: el tenant sale del admin; un curso ajeno u oculto es
         # indistinguible de uno inexistente.
-        return with_enrolled_count(
+        return with_materials(with_enrolled_count(
             Course.objects.filter(
                 organization=self.request.user.admin_profile.organization,
                 show=True,
             )
-        )
+        ))
 
     def perform_destroy(self, course):
         # RN-7: eliminar es para el curso creado por error. Con gente inscrita,

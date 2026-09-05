@@ -83,6 +83,7 @@ Dependencias Python (se instalan con `pip install -r requirements.txt`):
 - django-rest-knox
 - django-cors-headers
 - python-dotenv
+- pypdf 6.17.0 (validación de PDFs)
 
 Base de datos: SQLite por defecto (`db.sqlite3`, se crea al migrar). No es obligatorio usar PostgreSQL, Redis u otros servicios, pero puedes hacerlo si lo prefieres.
 
@@ -93,6 +94,35 @@ Base de datos: SQLite por defecto (`db.sqlite3`, se crea al migrar). No es oblig
 | Admin | `admin@lifebox.test` | `password123` |
 | Colaborador | `colaborador1@lifebox.test` | `password123` |
 | Colaborador | `colaborador2@lifebox.test` | `password123` |
+
+## Demostrar el flujo en 5 pasos
+
+Con este API corriendo (`make runserver`) y el Frontend en `http://localhost:3000`
+(ver su README). El recorrido completo se hace por la interfaz.
+
+1. **Entrar como administrador**: `admin@lifebox.test` / `password123`.
+2. **Crear un curso** en **Cursos → Nuevo curso**, con nombre, descripción, duración
+   aproximada en horas y versión (por ejemplo `1.0.1`).
+3. **Subirle material**: abrir el nombre del curso en la tabla (o **Ver ficha**) y
+   usar **Agregar PDF**, un archivo por operación. Hay dos de ejemplo listos en
+   [`docs/demo/`](docs/demo/): [la guía](docs/demo/guia-del-curso.pdf) y
+   [la actividad](docs/demo/actividad-de-repaso.pdf). Máximo 10 MiB, sin cifrado.
+4. **Crear un colaborador** en **Colaboradores → Nuevo colaborador**, con nombre y
+   correo. El servidor genera su contraseña temporal y la muestra **una sola vez**:
+   copiarla antes de cerrar el diálogo. Si se pierde, el admin la regenera desde la
+   misma pantalla — ver [SUPUESTOS.md](SUPUESTOS.md).
+5. **Inscribirlo** en **Inscripciones → Inscribir colaborador**, eligiendo el curso y
+   la persona. Esa misma pantalla es el panel: nombre, versión y cantidad de
+   inscritos por curso, todo junto, sin entrar curso por curso. Después, **cerrar
+   sesión e ingresar como ese colaborador** con su contraseña temporal (o con
+   `colaborador1@lifebox.test` / `password123`): en **Mis cursos** ve solo los cursos
+   que le asignaron y, al abrir la tarjeta, lee y descarga los PDFs del paso 3.
+
+Probado en **Windows**, con Python 3.13.3 y SQLite.
+
+El resto del bonus —reemplazar y quitar documentos, corregir la versión, dar de
+baja— está en [Demostrar el material PDF](#demostrar-el-material-pdf-bonus) y
+enumerado en [MEJORAS.md](MEJORAS.md).
 
 ## Endpoints disponibles
 
@@ -106,12 +136,13 @@ La organización nunca viaja en la petición: se deriva del usuario autenticado.
 | POST | `/user/login/` | No | Login → `{ token, user }`. Rechaza una cuenta sin perfil asociado |
 | POST | `/user/verify-token/` | Token | Verifica sesión |
 | GET | `/user/me/` | Token | Usuario actual |
+| POST | `/user/change-password/` | Token | Cambia la propia contraseña. Exige la actual, invalida los demás tokens y apaga `must_change_password` |
 
 ### Cursos
 
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|-------------|
-| GET | `/course/` | Admin | Lista los cursos de la organización, con `enrolled_count` |
+| GET | `/course/` | Admin | Lista los cursos de la organización, con `enrolled_count` y `materials` |
 | POST | `/course/` | Admin | Crea un curso |
 | GET | `/course/{id}/` | Admin | Detalle de un curso |
 | PATCH | `/course/{id}/` | Admin | Corrige nombre, descripción y duración; da de baja o reactiva (`is_active`) |
@@ -127,6 +158,7 @@ La organización nunca viaja en la petición: se deriva del usuario autenticado.
 | POST | `/course/{id}/assign/` | Admin | Inscribe a un colaborador. Reactiva la inscripción si estaba desinscrito |
 | DELETE | `/course/{id}/collaborators/{enrollment_id}/` | Admin | Desinscribe (borrado lógico) |
 | GET | `/course-collaborator/my-courses/` | Colaborador | Los cursos asignados a quien está autenticado |
+| GET | `/course-collaborator/my-courses/{enrollment_id}/` | Colaborador | La ficha de un curso propio. El id es el de la **inscripción**, no el del curso; lo ajeno responde `404` |
 
 ### Colaboradores
 
@@ -143,8 +175,8 @@ La organización nunca viaja en la petición: se deriva del usuario autenticado.
 apps/
   user/                 # User, Admin, Collaborator, login
   organization/         # Organization
-  course/               # Course (+ GET list)
-  course_collaborator/  # CourseCollaborator (modelo)
+  course/               # Course, CourseMaterial, gestión de cursos y PDFs
+  course_collaborator/  # Inscripciones propias, fichas y lectura privada de PDFs
 utils/                  # BaseAbstractModel, permissions, factories
 docs/FILES.md           # Guía de archivos locales (media)
 ```
@@ -158,3 +190,22 @@ make test
 ## Archivos locales
 
 Ver [docs/FILES.md](docs/FILES.md) para `MEDIA_ROOT` y uploads.
+
+## Demostrar el material PDF (bonus)
+
+Tras actualizar el repositorio, ejecutar `pip install -r requirements.txt` y
+`python manage.py migrate`. La nueva tabla es `CourseMaterial`; los archivos
+persisten en `media/`, fuera de Git. No requiere servicios externos.
+
+1. Con ambos servidores abiertos, ingresar como admin, crear un curso y abrir su
+   nombre desde **Cursos**.
+2. Usar **Agregar PDF** para subir [la guía](docs/demo/guia-del-curso.pdf) y
+   [la actividad](docs/demo/actividad-de-repaso.pdf), uno por operación.
+3. Inscribir al colaborador desde **Inscripciones**. Ingresar con esa cuenta y
+   abrir el curso en **Mis cursos**: seleccionar, leer y descargar los PDFs.
+4. Volver como admin, reemplazar o quitar un PDF desde su menú; actualizar la ficha
+   del colaborador. Una versión nueva comienza sin material.
+
+Límite: 10 MiB por documento, sin cifrado. API y almacenamiento privado:
+[docs/FILES.md](docs/FILES.md). Probado en **Windows, Python 3.13.3 y SQLite**.
+La suite de backend incluye **213 tests**, 28 específicos de material PDF.

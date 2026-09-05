@@ -1,0 +1,120 @@
+%PDF-1.3
+%âãÏÓ
+1 0 obj
+<<
+/Producer (pypdf)
+/Title (Gu\355a del curso)
+/Author (Lifebox Academy \204 demostraci\363n)
+>>
+endobj
+2 0 obj
+<<
+/Type /Pages
+/Count 2
+/Kids [ 4 0 R 7 0 R ]
+>>
+endobj
+3 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+4 0 obj
+<<
+/Type /Page
+/Resources <<
+/Font <<
+/F1 5 0 R
+>>
+>>
+/MediaBox [ 0.0 0.0 595 842 ]
+/Parent 2 0 R
+/Contents 6 0 R
+>>
+endobj
+5 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+/Encoding /WinAnsiEncoding
+>>
+endobj
+6 0 obj
+<<
+/Length 416
+>>
+stream
+0.043 0.431 0.310 rg
+BT /F1 23 Tf 50 765 Td (Guía del curso) Tj ET
+0.12 0.16 0.15 rg
+BT /F1 12 Tf 50 710 Td 22 TL
+(Lifebox Academy — documento de demostración) Tj T*
+() Tj T*
+(1. Entra a Mis cursos y abre la ficha del curso asignado.) Tj T*
+(2. Revisa su descripción, duración y versión.) Tj T*
+(3. Selecciona un PDF en Material del curso.) Tj T*
+(4. Lee el documento o descárgalo con el botón de la ficha.) Tj T*
+ET
+endstream
+endobj
+7 0 obj
+<<
+/Type /Page
+/Resources <<
+/Font <<
+/F1 8 0 R
+>>
+>>
+/MediaBox [ 0.0 0.0 595 842 ]
+/Parent 2 0 R
+/Contents 9 0 R
+>>
+endobj
+8 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+/Encoding /WinAnsiEncoding
+>>
+endobj
+9 0 obj
+<<
+/Length 393
+>>
+stream
+0.043 0.431 0.310 rg
+BT /F1 23 Tf 50 765 Td (Lectura y revisión) Tj ET
+0.12 0.16 0.15 rg
+BT /F1 12 Tf 50 710 Td 22 TL
+(Cada documento se abre por separado en el visor.) Tj T*
+(El administrador puede revisar esta misma presentación.) Tj T*
+() Tj T*
+(Si se publica una nueva versión, conserva tu inscripción anterior.) Tj T*
+(Los archivos de esa versión siguen disponibles en su ficha.) Tj T*
+ET
+endstream
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000015 00000 n 
+0000000128 00000 n 
+0000000193 00000 n 
+0000000242 00000 n 
+0000000374 00000 n 
+0000000471 00000 n 
+0000000938 00000 n 
+0000001070 00000 n 
+0000001167 00000 n 
+trailer
+<<
+/Size 10
+/Root 3 0 R
+/Info 1 0 R
+>>
+startxref
+1611
+%%EOF
