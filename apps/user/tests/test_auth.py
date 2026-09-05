@@ -103,3 +103,24 @@ class AuthTests(APITestCase):
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
                 self.assertIn("token", response.data)
                 self.assertEqual(response.data["user"]["role"], rol)
+
+    def test_el_usuario_expone_si_debe_cambiar_su_contrasena(self):
+        """SPEC-009 CA-13: RN-10 — el front no lo infiere de ningún otro dato."""
+        self.collaborator.user.must_change_password = True
+        self.collaborator.user.save()
+
+        login = self.client.post(
+            reverse("user-login"),
+            {"email": "colab@test.com", "password": "password123"},
+            format="json",
+        )
+        self.assertEqual(login.status_code, status.HTTP_200_OK)
+        self.assertTrue(login.data["user"]["must_change_password"])
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {login.data['token']}")
+
+        me = self.client.get(reverse("user-me"))
+        self.assertTrue(me.data["must_change_password"])
+
+        verify = self.client.post(reverse("user-verify-token"))
+        self.assertTrue(verify.data["user"]["must_change_password"])

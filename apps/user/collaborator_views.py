@@ -71,7 +71,12 @@ class CollaboratorCreateSerializer(serializers.ModelSerializer):
         password = generate_temporary_password()
 
         with transaction.atomic():
-            user = User.objects.create_user(password=password, **user_data)
+            # SPEC-009 RN-9: la contraseña la eligió el servidor y la vio el
+            # administrador; hasta que la persona ponga la suya, la cuenta la
+            # conocen dos.
+            user = User.objects.create_user(
+                password=password, must_change_password=True, **user_data
+            )
             collaborator = Collaborator.objects.create(user=user, **validated_data)
 
         collaborator.temporary_password = password
@@ -142,7 +147,13 @@ class CollaboratorResetPasswordView(GenericAPIView):
         collaborator = self.get_object()
         password = generate_temporary_password(user=collaborator.user)
         collaborator.user.set_password(password)
-        collaborator.user.save(update_fields=["password"])
+        # SPEC-009 RN-9: vuelve a haber una temporal en circulación, así que el
+        # aviso se enciende otra vez. Sin esto se apagaría para siempre después
+        # del primer cambio.
+        collaborator.user.must_change_password = True
+        collaborator.user.save(
+            update_fields=["password", "must_change_password", "updated_at"]
+        )
         return Response(
             {"temporary_password": password},
             status=status.HTTP_200_OK,
