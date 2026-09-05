@@ -1,74 +1,76 @@
-# Archivos locales en Django
+# Material PDF privado — SPEC-011
 
-Este proyecto guarda archivos en disco local (`MEDIA_ROOT`), sin Azure ni S3.
+Cada curso admite varios PDFs, uno por subida, de hasta **10 MiB (10.485.760 bytes)**,
+con al menos una página y sin cifrado. Se comprueban extensión, cabecera y estructura
+con `pypdf==6.17.0`; cambiar el nombre o el MIME no convierte otro archivo en PDF.
 
-## Configuración (ya incluida)
+## Preparación y almacenamiento
 
-En `academy/settings.py`:
-
-```python
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+```bash
+pip install -r requirements.txt
+python manage.py migrate
 ```
 
-En desarrollo, `academy/urls.py` sirve los archivos cuando `DEBUG=True`.
+`CourseMaterial` vive en `apps/course/models.py`, con migración
+`0002_coursematerial`. Guarda nombre original, tamaño, páginas y `FileField` bajo
+`MEDIA_ROOT/courses/{course_id}/materials/{uuid}.pdf`; `media/` está ignorado por Git.
+El servidor necesita permiso de escritura y almacenamiento persistente en esa carpeta.
 
-La carpeta `media/` está en `.gitignore`.
+**No publicar `/media/` como carpeta estática**, tampoco en desarrollo. Las vistas
+privadas comprueban Knox, rol, organización y pertenencia al curso o inscripción.
+No se devuelven rutas físicas ni `file.url` en los metadatos. Para trasladar esta
+instancia, conservar tanto la base de datos como `MEDIA_ROOT`.
 
-## FileField (ejemplo)
+## Contrato
 
-```python
-def activity_upload_path(instance, filename):
-    return f"activities/{instance.course_id}/{filename}"
+| Método | Ruta | Operación |
+|---|---|---|
+| POST | `/course/{id}/materials/` | Admin: agregar, `201` |
+| PUT | `/course/{id}/materials/{material_id}/` | Admin: reemplazar, `200` |
+| DELETE | `/course/{id}/materials/{material_id}/` | Admin: quitar, `204` |
+| GET | `/course/{id}/materials/{material_id}/file/` | Admin: leer PDF del curso propio |
+| GET | `/course-collaborator/my-courses/{enrollment_id}/materials/{material_id}/file/` | Colaborador: leer PDF de inscripción propia |
 
-class Activity(models.Model):
-    course = models.ForeignKey("course.Course", on_delete=models.CASCADE)
-    name = models.CharField(max_length=255)
-    activity_type = models.CharField(max_length=20)  # READING | VIDEO | AUDIO
-    file = models.FileField(upload_to=activity_upload_path)
-```
+POST y PUT usan `multipart/form-data`, campo `file`. Todas requieren
+`Authorization: Token <token>`. Los metadatos `{id, filename, size_bytes,
+page_count, updated_at}` aparecen en `materials` del curso en listas y fichas.
+Sin material devuelve `[]`; la nueva versión también comienza vacía.
 
-## Upload con DRF
+Quitar usa `show=False` y conserva el archivo privado. Reemplazar conserva id y
+posición; escribe un archivo nuevo, cambia la referencia de forma atómica y limpia
+el anterior después del commit. Un error de disco o base conserva el PDF previo.
+No hay historial de reemplazos ni pantalla de recuperación.
 
-Usa `multipart/form-data` y `MultiPartParser`:
+La lectura devuelve `application/pdf`, nombre de descarga, `nosniff` y
+`Cache-Control: private, no-store`. Lo ajeno u oculto devuelve `404`; sin token,
+`401`; rol equivocado, `403`. Un archivo físico ausente produce un `404` controlado.
 
-```python
-from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.generics import CreateAPIView
-
-class ActivityCreateView(CreateAPIView):
-    parser_classes = [MultiPartParser, FormParser]
-    # ...
-```
-
-En la respuesta de lectura, expón una URL absoluta:
-
-```python
-def get_file_url(self, obj):
-    request = self.context.get("request")
-    if obj.file and request:
-        return request.build_absolute_uri(obj.file.url)
-    return None
-```
-
-## Validación sugerida
-
-Valida por `content_type` y/o extensión, y un tamaño máximo según el tipo
-(PDF/audio ~10–20 MB, video ~50 MB).
-
-## Frontend (FormData)
+## Frontend
 
 ```typescript
-const formData = new FormData()
-formData.append('name', name)
-formData.append('activity_type', activityType)
-formData.append('file', file)
-// No setear Content-Type manualmente
-await $fetch(url, { method: 'POST', body: formData })
+const body = new FormData()
+body.append('file', file)
+await $apiFetch(endpoints.courseMaterials(courseId), { method: 'POST', body, retry: 0 })
+// El navegador agrega el boundary: no fijar Content-Type manualmente.
 ```
 
-## Visualización
+`VisorPdf.vue` solicita el PDF seleccionado con `$apiFetch`, `responseType: 'blob'`
+y el token en el header. Crea una URL con `URL.createObjectURL`, la usa en el iframe
+y en «Descargar PDF», y la revoca al cambiar o salir. Aborta solicitudes anteriores
+para impedir que un archivo anterior reemplace al seleccionado. No usa tokens en
+query strings ni enlaces públicos. Sin visor nativo se ofrece la descarga.
 
-- PDF / lectura: `<iframe :src="fileUrl">`
-- Video: `<video controls :src="fileUrl">`
-- Audio: `<audio controls :src="fileUrl">`
+## Demostración
+
+1. Ingresar como admin y abrir **Cursos → nombre del curso → Agregar PDF**.
+2. Subir [guia-del-curso.pdf](demo/guia-del-curso.pdf) y después
+   [actividad-de-repaso.pdf](demo/actividad-de-repaso.pdf). Seleccionar ambos para
+   comprobar su contenido y descargar uno.
+3. Inscribir un colaborador; ingresar con esa cuenta y abrir la tarjeta del curso.
+   Se muestran los mismos documentos, sin controles de administración.
+4. Como admin, reemplazar o quitar un documento desde su menú. Actualizar la ficha
+   del colaborador para ver el resultado; publicar una versión nueva comienza vacía.
+
+Los PDFs de ejemplo están incluidos en Git y tienen texto de demostración propio.
+Ver [SPEC-011](specs/SPEC-011-material-pdf.md) y
+[ADR-001](adr/ADR-001-material-pdf-local.md).

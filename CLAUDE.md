@@ -46,10 +46,10 @@ academy/settings.py   AUTH_USER_MODEL=user.User, Knox como auth por defecto, COR
 academy/urls.py       monta los prefijos de URL (ver "Ruteo")
 apps/organization/    Organization — el tenant
 apps/user/            User (email como USERNAME_FIELD), Admin, Collaborator, login
-apps/course/          Course
+apps/course/          Course, CourseMaterial y material_views.py (PDFs privados)
 apps/course_collaborator/  CourseCollaborator (la inscripción) + las vistas del colaborador
 utils/                BaseAbstractModel, IsAdmin/IsCollaborator, model_factories
-docs/FILES.md         guía de uploads a MEDIA_ROOT local (sin S3/Azure)
+docs/FILES.md         guía de PDFs privados en MEDIA_ROOT local (sin S3/Azure)
 ```
 
 ### Modelo de datos
@@ -112,7 +112,7 @@ valer en el backend (queryset filtrado), sin confiar en el front.
 | `/user/` | `apps.user.urls` | login, verify-token, me |
 | `/course/` | `apps.course.urls` | |
 | `/collaborator/` | `apps.user.collaborator_urls` | **el CRUD de colaboradores vive en `apps/user/`**, en el par `collaborator_urls.py` / `collaborator_views.py`, no en una app propia |
-| `/course-collaborator/` | `apps.course_collaborator.urls` | las dos vistas del lado del colaborador: `my-courses/` y su detalle `my-courses/{enrollment_id}/`. Las dos comparten el filtro `mis_inscripciones()`, que se declara una sola vez a propósito (SPEC-010 RN-4) |
+| `/course-collaborator/` | `apps.course_collaborator.urls` | lista, ficha y archivo PDF del colaborador. Las tres comparten el filtro `mis_inscripciones()` (SPEC-010 y SPEC-011) |
 
 ### Contrato con el frontend
 
@@ -141,8 +141,13 @@ Ya implementado:
 | DELETE | `/collaborator/{id}/` | `IsAdmin` — SPEC-007; da de baja: `Collaborator.show=False` **y** `user.is_active=False` en una transacción |
 | POST | `/user/change-password/` | autenticado — SPEC-009; exige la contraseña actual, invalida los demás tokens del usuario y apaga `must_change_password` |
 | GET | `/course-collaborator/my-courses/{enrollment_id}/` | `IsCollaborator` — SPEC-010; la ficha de una inscripción **propia**, con la misma forma que una fila de la lista. Se busca por id de inscripción, no de curso: así «solo lo suyo» es cierto por construcción. Lo ajeno responde `404`, nunca `403` |
+| POST | `/course/{id}/materials/` | `IsAdmin` — subir un PDF (multipart `file`), `201` |
+| PUT | `/course/{id}/materials/{material_id}/` | `IsAdmin` — reemplazar, `200` |
+| DELETE | `/course/{id}/materials/{material_id}/` | `IsAdmin` — quitar por borrado lógico, `204` |
+| GET | `/course/{id}/materials/{material_id}/file/` | `IsAdmin` — PDF privado del curso propio |
+| GET | `/course-collaborator/my-courses/{enrollment_id}/materials/{material_id}/file/` | `IsCollaborator` — PDF de una inscripción propia |
 
-Los endpoints de SPEC-007 a SPEC-010 son **bonus**: no venían en el
+Los endpoints de SPEC-007 a SPEC-011 son **bonus**: no venían en el
 contrato original de `apiEndpoints.ts`, pero ya están declarados ahí y tienen
 interfaz. Al agregar uno nuevo, declararlo en ese archivo primero: es la fuente
 de verdad de las rutas.
@@ -170,7 +175,7 @@ condiciones.
 
 La Enmienda 2 de SPEC-010 retira las fotos externas del frontend y deja una ficha
 compacta con iniciales locales. Acá solo se actualiza el espejo del spec: no hay
-cambios de API ni de modelo. El material real de la ficha queda para SPEC-011.
+cambios de API ni de modelo. SPEC-011 agrega varios PDFs privados por curso y la ficha compartida del admin.
 
 Header de auth: `Authorization: Token <token>`.
 Login inválido responde `400` con `{"text": "Credenciales inválidas"}` — el front
@@ -226,6 +231,27 @@ pendiente»— es candidata a quedar falsa. Releerlas al cerrar cada feature.
 
 Una funcionalidad **sin spec** obliga igual, y más: no hay un documento aparte
 donde quede la decisión.
+
+## SPEC-011 — material PDF implementado
+
+`CourseMaterial` relaciona varios PDFs con cada curso: archivo privado, nombre
+original seguro, tamaño, páginas y campos de `BaseAbstractModel`. La migración
+`course/0002_coursematerial` debe aplicarse junto con las existentes.
+`pypdf==6.17.0` valida estructura y páginas, además de extensión, cabecera,
+tamaño máximo 10 MiB y ausencia de cifrado. Un documento por operación.
+
+`apps/course/material_views.py` reúne serializers y vistas de material; lista y
+ficha de ambos roles incluyen `materials` de solo lectura, sin rutas de disco.
+`with_materials()` precarga los documentos visibles para evitar consultas por fila.
+Los archivos se guardan bajo `MEDIA_ROOT/courses/{id}/materials/{uuid}.pdf`.
+`/media/` no se publica ni siquiera con DEBUG: la entrega valida token, rol,
+organización, curso e inscripción. Ver `docs/FILES.md` y ADR-001.
+
+Reemplazar conserva id y orden; guarda el nuevo archivo antes de cambiar la
+referencia y limpia el anterior después del commit. Quitar usa `show=False`.
+Los cursos retirados conservan su material; los eliminados no son accesibles.
+Una nueva versión empieza con `materials: []`, sin copiar ni quitar los PDFs del
+curso de origen. La ficha del admin no exige inscripción.
 
 ## Bitácora de commits
 
@@ -305,3 +331,8 @@ dos repos.
 | 2026-09-05 | `dev` | Anotar el merge de la Enmienda 1 en la bitácora | La fila del merge, que el propio merge no puede contener |
 | 2026-09-05 | `feature/iniciales-de-curso` | Reflejar la Enmienda 2 de SPEC-010 en el contexto del backend | Espejo del spec: iniciales locales y ficha compacta en el frontend; API y modelo sin cambios. Material pendiente para SPEC-011 |
 | 2026-09-05 | `dev` | Merge de feature/iniciales-de-curso | Enmienda 2 de SPEC-010 integrada con `--no-ff`: iniciales locales, ficha compacta y material reservado para SPEC-011 |
+| 2026-09-05 | `feature/material-pdf` | Proponer SPEC-011 de material PDF y ficha compartida | Spec de nueve artículos y ADR: varios PDFs por curso, gestión individual del admin y ficha/visor compartidos. Propuesta pendiente de aprobación; sin cambios de implementación |
+| 2026-09-05 | `feature/material-pdf` | Agregar tests de material PDF (SPEC-011) | Spec aprobada; pypdf 6.17.0 y 28 tests de API con PDFs reales, permisos, archivos privados, reemplazo y fallos de disco/base. Rojo esperado: rutas aún inexistentes |
+| 2026-09-05 | `feature/material-pdf` | Publicar varios PDFs privados por curso | CourseMaterial, migración y cinco endpoints con Knox, tenant e inscripción; validación con pypdf, reemplazo atómico y borrado lógico. Actualiza contratos anteriores y entregables, guía privada y dos PDFs de ejemplo; 213 tests verdes. |
+| 2026-09-05 | `feature/material-pdf` | Conservar los PDFs de ejemplo como archivos binarios | Marca *.pdf como binary para impedir que autocrlf cambie los offsets internos al clonar en Windows; verifica los bytes y páginas guardados en Git. |
+| 2026-09-05 | `dev` | Merge de feature/material-pdf | SPEC-011 cerrada: varios PDFs privados, migración aplicada y 213 tests verdes. Integración local con --no-ff; sin push. |

@@ -1,5 +1,8 @@
 from django.urls import path
 
+from apps.course.material_views import (
+    CourseMaterialListView, CourseMaterialDetailView, CourseMaterialFileView,
+)
 from apps.course.views import (
     CourseAssignView,
     CourseCollaboratorsView,
@@ -11,6 +14,9 @@ from apps.course.views import (
 )
 
 urlpatterns = [
+    path("<int:pk>/materials/", CourseMaterialListView.as_view(), name="course-material-list"),
+    path("<int:pk>/materials/<int:material_id>/", CourseMaterialDetailView.as_view(), name="course-material-detail"),
+    path("<int:pk>/materials/<int:material_id>/file/", CourseMaterialFileView.as_view(), name="course-material-file"),
     path("", CourseListCreateView.as_view(), name="course-list"),
     # Va antes de cualquier ruta con parámetro: el conversor `int` ya evita la
     # colisión, pero el orden deja explícito que «enrollments» es una ruta fija.

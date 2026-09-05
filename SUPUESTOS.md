@@ -461,3 +461,26 @@ pega no agregaría información —seguiría siendo una foto arbitraria, ahora c
 paso manual—, y la imagen *real* de un curso es un archivo subido, que es otra
 feature. Si algún día el curso gana una portada de verdad, la regla actual pasa a
 ser su respaldo y no hay que deshacer nada.
+
+## SPEC-011 — material PDF
+
+**Cada versión del curso tiene varios PDFs propios, con publicación inmediata.**
+El usuario eligió varios; se sube uno por operación para identificar sus errores.
+Agregar crea otro documento incluso con nombre repetido; reemplazar conserva id
+y orden. La nueva versión empieza vacía para evitar heredar material por accidente.
+
+**Se aceptan PDFs de hasta 10 MiB, con al menos una página y sin cifrado.**
+La extensión y el MIME del cliente no demuestran formato: se comprueban cabecera
+y estructura con pypdf. El cifrado se rechaza para no incorporar contraseñas de archivos.
+
+**La autorización se aplica también a los bytes.** Se guarda en disco local con
+nombres únicos y se entrega por las vistas de admin o de inscripción propia.
+No se exponen URLs de almacenamiento; `/media/` permanece privado incluso con
+DEBUG. Un curso retirado conserva acceso para sus inscritos; eliminar, desinscribir
+o quitar el documento retira ese acceso. El admin no necesita inscribirse.
+
+**Quitar conserva fila y archivo; reemplazar no crea un historial.** El borrado
+lógico mantiene la convención del proyecto. El reemplazo guarda primero el nuevo
+archivo, cambia la referencia en una transacción y limpia el anterior al confirmar;
+si falla el guardado se conserva el material anterior. La aplicación no ofrece
+restauración de documentos ni copias de versiones reemplazadas.

@@ -104,6 +104,51 @@ inválidas»—, porque en ese punto la persona ya acertó su contraseña: es su
 y no hay nada que ocultarle. El efecto secundario aceptado es que un superusuario
 de `createsuperuser` deja de poder entrar por la API; para eso está `/admin/`.
 
+## 9. Cambiar la propia contraseña
+
+**Problema:** el colaborador recibía una contraseña temporal al ser creado y **no
+tenía ninguna forma de cambiarla**. La única salida era pedirle al administrador
+que la regenerara, y eso entregaba otra temporal: la contraseña de esa persona la
+conocían siempre dos personas.
+
+`POST /user/change-password/` la cambia exigiendo la actual, e **invalida los demás
+tokens** de esa cuenta para que una sesión abierta en otro lado no sobreviva al
+cambio. El campo `User.must_change_password` marca que la contraseña la eligió el
+servidor: se enciende al crear un colaborador y al regenerarle la contraseña, y se
+apaga cuando la persona pone la suya. Fue **la primera migración funcional de la entrega**, y
+hizo falta porque `last_login` nunca se escribe —el login usa `authenticate()` y
+Knox, no `django.contrib.auth.login()`—, así que no distingue el primer ingreso del
+décimo.
+
+## 10. El colaborador puede abrir la ficha de un curso suyo
+
+**Problema:** el colaborador solo tenía la lista completa de sus cursos. No existía
+ningún endpoint que le devolviera **un** curso, así que una pantalla de detalle no
+podía sobrevivir a una recarga ni a un enlace directo. `GET /course/{id}/` no
+servía: es `IsAdmin`.
+
+`GET /course-collaborator/my-courses/{enrollment_id}/` devuelve una inscripción
+propia con su curso, en la misma forma que una fila de la lista. Se busca por id de
+**inscripción** y no de curso, así «solo lo que me asignaron» es cierto **por
+construcción**: no existe el momento intermedio en que un curso ajeno está
+encontrado pero todavía no rechazado. Lo ajeno, oculto o de otro tenant responde
+`404` y nunca `403`, porque un `403` confirmaría que existe.
+
+El filtro que define «lo mío» se declara una sola vez y lo comparten la lista y la
+ficha: si divergieran, la ficha podría abrir un curso que la lista no muestra.
+
+## 11. Varios PDFs privados por curso
+
+**Problema:** la ficha describía un curso, pero no entregaba su material. El admin
+ahora agrega, reemplaza y quita documentos individuales que el colaborador puede
+leer después. Ambos reciben los mismos metadatos y bytes, con permisos propios.
+
+El modelo `CourseMaterial` conserva archivo, nombre, tamaño y páginas. pypdf valida
+el formato real, máximo 10 MiB y sin cifrado. Las vistas filtran rol, organización
+y pertenencia; se retira la ruta pública `/media/`. El reemplazo conserva el PDF
+anterior si falla el guardado y evita sobrescribir otros archivos. La nueva versión
+comienza sin material; los inscritos de la anterior conservan sus documentos.
+
 ---
 
 ## Cómo está construido esto
@@ -112,8 +157,10 @@ de `createsuperuser` deja de poder entrar por la API; para eso está `/admin/`.
 vistas nuevas son genéricas de DRF sobre los permisos `IsAdmin` / `IsCollaborator`
 que venían en el repo; los serializers viven en el mismo `views.py`, como el resto;
 y el estado que se manipula —`show` de `BaseAbstractModel`, `is_active`— ya estaba
-en los modelos base sin que nada lo escribiera. **Estas ocho mejoras no agregaron
-un solo modelo, campo, migración ni dependencia.**
+en los modelos base sin que nada lo escribiera. Nueve de estas once mejoras no
+agregaron modelos, campos, migraciones ni dependencias. SPEC-009 incorpora
+`User.must_change_password`; SPEC-011 incorpora `CourseMaterial`, su migración
+y pypdf para validar el contenido de los documentos.
 
 **La definición de «inscrito vigente» vive una sola vez.** El contador del panel,
 la lista de inscritos y el filtro de mis cursos la comparten: si el contador dice
@@ -127,4 +174,4 @@ versionado existen para conservar.
 
 **Cada mejora se especificó antes de escribirse** (`docs/specs/SPEC-00X-*.md`,
 nueve artículos con vocabulario RFC 2119) y se implementó con tests primero. La
-suite completa está en **151 tests**.
+suite completa está en **213 tests**.
