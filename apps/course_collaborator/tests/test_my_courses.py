@@ -272,3 +272,223 @@ class MyCoursesTests(APITestCase):
 
         self.assertEqual(len(response.data), 7)
         self.assertEqual(len(muchas), len(pocas))
+
+
+class MyCourseDetailTests(APITestCase):
+    """SPEC-010 — GET /course-collaborator/my-courses/{enrollment_id}/ (CA-1 a CA-12).
+
+    Vive en el mismo archivo que la lista a propósito: RN-4 obliga a que las dos
+    vistas compartan el criterio, y separarlas invitaría a que se separaran
+    también los filtros.
+    """
+
+    def setUp(self):
+        self.org_a = model_factories.create_organization(name="Organización A")
+        self.org_b = model_factories.create_organization(name="Organización B")
+        model_factories.create_admin(
+            organization=self.org_a,
+            email="admin.a@test.com",
+            password="password123",
+        )
+        # Ana y Luis comparten organización y hasta el curso: el aislamiento que
+        # esta vista tiene que dar no es entre tenants, es entre compañeros.
+        self.ana = model_factories.create_collaborator(
+            organization=self.org_a,
+            email="ana@test.com",
+            first_name="Ana",
+            last_name="Pérez",
+            password="password123",
+        )
+        self.luis = model_factories.create_collaborator(
+            organization=self.org_a,
+            email="luis@test.com",
+            first_name="Luis",
+            last_name="Rojas",
+            password="password123",
+        )
+        self.bruno = model_factories.create_collaborator(
+            organization=self.org_b,
+            email="bruno@test.com",
+            first_name="Bruno",
+            last_name="Soto",
+            password="password123",
+        )
+
+        self.curso = Course.objects.create(
+            full_name="Prevención de riesgos",
+            description="Curso obligatorio de inducción",
+            duration_hours=4,
+            version="2.0",
+            organization=self.org_a,
+        )
+        self.curso_ajeno = Course.objects.create(
+            full_name="Curso de otra organización",
+            organization=self.org_b,
+        )
+
+        self.de_ana = CourseCollaborator.objects.create(
+            course=self.curso, collaborator=self.ana
+        )
+        self.de_luis = CourseCollaborator.objects.create(
+            course=self.curso, collaborator=self.luis
+        )
+        self.de_bruno = CourseCollaborator.objects.create(
+            course=self.curso_ajeno, collaborator=self.bruno
+        )
+
+    # -- utilidades -----------------------------------------------------------
+
+    def authenticate(self, email):
+        response = self.client.post(
+            reverse("user-login"),
+            {"email": email, "password": "password123"},
+            format="json",
+        )
+        token = response.data["token"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
+
+    def url(self, enrollment_id):
+        return reverse("my-course-detail", args=[enrollment_id])
+
+    # -- CA-1 -----------------------------------------------------------------
+
+    def test_colaborador_abre_la_ficha_de_su_inscripcion(self):
+        self.authenticate("ana@test.com")
+
+        response = self.client.get(self.url(self.de_ana.id))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(response.data.keys()), {"id", "assigned_at", "course"})
+        self.assertEqual(response.data["id"], self.de_ana.id)
+        self.assertEqual(
+            dict(response.data["course"]),
+            {
+                "id": self.curso.id,
+                "full_name": "Prevención de riesgos",
+                "description": "Curso obligatorio de inducción",
+                "duration_hours": 4,
+                "version": "2.0",
+                "is_active": True,
+            },
+        )
+
+    # -- CA-2: el aislamiento que un filtro por tenant NO da ------------------
+
+    def test_no_abre_la_ficha_de_un_companero_de_su_organizacion(self):
+        """CA-2: Ana y Luis comparten organización y curso. Aun así, la
+        inscripción de Luis no es de Ana, y para Ana no existe."""
+        self.authenticate("ana@test.com")
+
+        response = self.client.get(self.url(self.de_luis.id))
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    # -- CA-3 -----------------------------------------------------------------
+
+    def test_no_abre_la_ficha_de_otra_organizacion(self):
+        self.authenticate("ana@test.com")
+
+        response = self.client.get(self.url(self.de_bruno.id))
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    # -- CA-4, CA-5 -----------------------------------------------------------
+
+    def test_inscripcion_desinscrita_no_tiene_ficha(self):
+        self.de_ana.show = False
+        self.de_ana.save(update_fields=["show"])
+        self.authenticate("ana@test.com")
+
+        response = self.client.get(self.url(self.de_ana.id))
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_curso_eliminado_no_tiene_ficha(self):
+        self.curso.show = False
+        self.curso.save(update_fields=["show"])
+        self.authenticate("ana@test.com")
+
+        response = self.client.get(self.url(self.de_ana.id))
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    # -- CA-6: la asimetría de SPEC-006 RN-5 se conserva ----------------------
+
+    def test_curso_retirado_si_abre_su_ficha(self):
+        """CA-6: `is_active` NO se filtra. Quien tenía el curso asignado conserva
+        la obligación y debe poder leer el aviso; devolver 404 acá sería
+        «arreglar» una asimetría que SPEC-006 decidió a propósito."""
+        self.curso.is_active = False
+        self.curso.save(update_fields=["is_active"])
+        self.authenticate("ana@test.com")
+
+        response = self.client.get(self.url(self.de_ana.id))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data["course"]["is_active"])
+
+    # -- CA-7, CA-8 -----------------------------------------------------------
+
+    def test_admin_no_puede_abrir_la_ficha(self):
+        self.authenticate("admin.a@test.com")
+
+        response = self.client.get(self.url(self.de_ana.id))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_sin_token_devuelve_401(self):
+        response = self.client.get(self.url(self.de_ana.id))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    # -- CA-9 -----------------------------------------------------------------
+
+    def test_no_expone_datos_de_otros_inscritos(self):
+        self.authenticate("ana@test.com")
+
+        response = self.client.get(self.url(self.de_ana.id))
+
+        self.assertNotIn("enrolled_count", response.data["course"])
+        self.assertNotIn("collaborator", response.data)
+        self.assertNotIn("luis@test.com", str(response.data))
+
+    # -- CA-10, CA-11 ---------------------------------------------------------
+
+    def test_inscripcion_inexistente_devuelve_404(self):
+        self.authenticate("ana@test.com")
+
+        response = self.client.get(self.url(999999))
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_la_ficha_es_de_solo_lectura(self):
+        """CA-11: el colaborador lee; la escritura es del admin."""
+        self.authenticate("ana@test.com")
+        url = self.url(self.de_ana.id)
+
+        respuestas = {
+            "POST": self.client.post(url, {}, format="json"),
+            "PATCH": self.client.patch(url, {"id": 1}, format="json"),
+            "DELETE": self.client.delete(url),
+        }
+
+        for metodo, response in respuestas.items():
+            self.assertEqual(
+                response.status_code,
+                status.HTTP_405_METHOD_NOT_ALLOWED,
+                msg=f"{metodo} debería estar prohibido en la ficha",
+            )
+
+    # -- CA-12: la prueba ejecutable de RN-4 ----------------------------------
+
+    def test_la_ficha_dice_exactamente_lo_mismo_que_la_lista(self):
+        """CA-12: si alguien cambia un filtro o un campo de un solo lado, este
+        test cae. Es la garantía de que la lista y la ficha no se separen."""
+        self.authenticate("ana@test.com")
+
+        lista = self.client.get(reverse("my-courses")).data
+        de_la_lista = next(fila for fila in lista if fila["id"] == self.de_ana.id)
+        de_la_ficha = self.client.get(self.url(self.de_ana.id)).data
+
+        self.assertEqual(dict(de_la_ficha), dict(de_la_lista))
+        self.assertEqual(dict(de_la_ficha["course"]), dict(de_la_lista["course"]))
