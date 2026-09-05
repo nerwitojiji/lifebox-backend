@@ -112,7 +112,7 @@ valer en el backend (queryset filtrado), sin confiar en el front.
 | `/user/` | `apps.user.urls` | login, verify-token, me |
 | `/course/` | `apps.course.urls` | |
 | `/collaborator/` | `apps.user.collaborator_urls` | **el CRUD de colaboradores vive en `apps/user/`**, en el par `collaborator_urls.py` / `collaborator_views.py`, no en una app propia |
-| `/course-collaborator/` | `apps.course_collaborator.urls` | `my-courses/` — la única vista del lado del colaborador |
+| `/course-collaborator/` | `apps.course_collaborator.urls` | las dos vistas del lado del colaborador: `my-courses/` y su detalle `my-courses/{enrollment_id}/`. Las dos comparten el filtro `mis_inscripciones()`, que se declara una sola vez a propósito (SPEC-010 RN-4) |
 
 ### Contrato con el frontend
 
@@ -140,8 +140,9 @@ Ya implementado:
 | DELETE | `/course/{id}/collaborators/{enrollment_id}/` | `IsAdmin` — SPEC-007; desinscribe (`show=False`); admite cursos inactivos |
 | DELETE | `/collaborator/{id}/` | `IsAdmin` — SPEC-007; da de baja: `Collaborator.show=False` **y** `user.is_active=False` en una transacción |
 | POST | `/user/change-password/` | autenticado — SPEC-009; exige la contraseña actual, invalida los demás tokens del usuario y apaga `must_change_password` |
+| GET | `/course-collaborator/my-courses/{enrollment_id}/` | `IsCollaborator` — SPEC-010; la ficha de una inscripción **propia**, con la misma forma que una fila de la lista. Se busca por id de inscripción, no de curso: así «solo lo suyo» es cierto por construcción. Lo ajeno responde `404`, nunca `403` |
 
-Los endpoints de SPEC-007, SPEC-008 y SPEC-009 son **bonus**: no venían en el
+Los endpoints de SPEC-007 a SPEC-010 son **bonus**: no venían en el
 contrato original de `apiEndpoints.ts`, pero ya están declarados ahí y tienen
 interfaz. Al agregar uno nuevo, declararlo en ese archivo primero: es la fuente
 de verdad de las rutas.
@@ -291,3 +292,4 @@ dos repos.
 | 2026-09-05 | `dev` | Exigir que este archivo se actualice al cerrar cada feature | La bitácora al día no garantiza el contexto al día: son cosas distintas y ya se habían separado. El protocolo pasa a nombrar qué secciones envejecen |
 | 2026-09-05 | `feature/ficha-de-curso` | Incorporar SPEC-010 (ficha de curso) al repositorio | El enunciado §6.1 pide dar contexto antes de entrar a un curso, no imágenes: la imagen es decorativa y va por Lorem Picsum sin tocar el modelo. Lo que falta en el back es la puerta —`GET /course/{id}/` es `IsAdmin`, así que el colaborador no tiene ningún endpoint que le devuelva un curso—, y sin ella la ficha no sobrevive a una recarga |
 | 2026-09-05 | `feature/ficha-de-curso` | Agregar tests de la ficha de curso (SPEC-010) | 12 tests cubren CA-1..CA-12 en el mismo archivo que la lista, porque RN-4 obliga a que compartan criterio; CA-12 compara ficha contra lista campo por campo y cae si alguien toca un filtro de un solo lado. Rojo esperado: 12 errores por la ruta inexistente |
+| 2026-09-05 | `feature/ficha-de-curso` | Exponer la ficha de un curso asignado | `RetrieveAPIView` sobre `my-courses/{enrollment_id}/`, buscando por id de inscripción para que «solo lo suyo» sea cierto por construcción. El filtro sale de `MyCoursesView` y pasa a `mis_inscripciones()`, compartido por lista y ficha (RN-4). Incluye `SUPUESTOS.md`; verde 185/185, sin migraciones |

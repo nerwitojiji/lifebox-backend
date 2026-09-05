@@ -419,3 +419,45 @@ existe —lo regenera el administrador— y la pantalla de login lo explica.
 **No hay límite de intentos sobre `current_password`.** Es una defensa real contra
 fuerza bruta, pero exige almacenar intentos o configurar un throttle, y ninguno de
 los dos existe en el proyecto. Queda como límite conocido.
+
+## SPEC-010 — Ficha de curso
+
+**La ficha se pide por el id de la inscripción, no por el del curso.** Es lo que
+ya devuelve cada fila de `GET /course-collaborator/my-courses/` como `id`, y hace
+que «solo los cursos que le asignaron» sea cierto **por construcción**: la vista
+busca entre las inscripciones del colaborador del token, así que no existe el
+momento intermedio en que un curso ajeno está encontrado pero todavía no
+rechazado. La alternativa —buscar el curso y después preguntar si está inscrito—
+es la misma regla escrita en dos pasos, y el segundo se puede olvidar.
+→ `apps/course_collaborator/views.py`
+
+**Una inscripción ajena responde `404`, no `403`.** Un `403` confirmaría que esa
+inscripción existe, que es justamente lo que no corresponde contarle a alguien que
+no es su dueño. Es el mismo criterio que ya usan todas las vistas del proyecto
+para lo que queda fuera del tenant.
+
+**El criterio de «inscripción propia visible» se declara una sola vez y lo
+comparten la lista y la ficha.** Está en `mis_inscripciones()`, del mismo modo en
+que SPEC-005 factorizó `vigente(prefix)`. Si cada vista escribiera su propio
+filtro, la ficha podría abrir un curso que la lista no muestra —o al revés— y el
+colaborador vería dos verdades distintas sobre lo mismo. El test CA-12 compara las
+dos respuestas campo por campo justamente para que no se separen en silencio.
+
+**Un curso retirado sí abre su ficha.** `is_active` no se filtra, igual que en la
+lista: retirar un curso del catálogo no desinscribe a nadie, y quien lo tenía
+asignado conserva la obligación. La ficha se abre con el aviso, que es lo que esa
+persona necesita leer. Devolver `404` acá parecería una corrección de coherencia y
+sería una pérdida de información.
+
+**La ficha no expone ni un campo más que la lista.** Nada de `enrolled_count` ni
+de otros inscritos: cuánta gente comparte el curso es información de gestión del
+administrador, no del colaborador. Es la misma regla de SPEC-006, y no se
+entreabre porque la pantalla sea más grande.
+
+**La imagen del curso no es un dato del servidor.** No hay campo, ni migración, ni
+`MEDIA_ROOT`, ni dependencia nueva: la interfaz deriva una imagen decorativa de
+Lorem Picsum a partir del nombre del curso. Guardar una URL que el administrador
+pega no agregaría información —seguiría siendo una foto arbitraria, ahora con un
+paso manual—, y la imagen *real* de un curso es un archivo subido, que es otra
+feature. Si algún día el curso gana una portada de verdad, la regla actual pasa a
+ser su respaldo y no hay que deshacer nada.
