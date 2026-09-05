@@ -196,6 +196,32 @@ como afirmación, el porqué a continuación y `→ archivo` cuando ayude a ubic
 El porqué es lo que importa: sin él la línea describe el código en vez de explicar
 la decisión.
 
+## Mantener este archivo al día — obligatorio
+
+**Toda feature o funcionalidad nueva termina actualizando este archivo, tenga
+spec o no**, en el mismo commit que el cambio.
+
+Actualizar la bitácora **no alcanza**: son cosas distintas. La bitácora registra
+*qué pasó*; las secciones de arriba describen *qué es verdad ahora*. Se puede
+tener la bitácora impecable y el contexto mintiendo — ya pasó acá: la tabla del
+contrato no listó `POST /user/change-password/` ni la condición de `version` en
+el `PATCH` durante varios commits.
+
+Lo que envejece en este archivo:
+
+- **La tabla del contrato de endpoints.** Ruta nueva, verbo nuevo o cambio de
+  comportamiento en una existente → fila nueva o fila corregida.
+- **El modelo de datos**, cuando se agrega un campo con reglas propias.
+- **El ruteo**, si se suma un prefijo o una vuelta poco obvia.
+- **Las «trampas»**, que son la memoria de las asimetrías deliberadas: si una
+  spec nueva crea o elimina una, se anota o se saca.
+
+**Regla práctica:** cualquier afirmación en presente —«no queda ningún endpoint
+pendiente»— es candidata a quedar falsa. Releerlas al cerrar cada feature.
+
+Una funcionalidad **sin spec** obliga igual, y más: no hay un documento aparte
+donde quede la decisión.
+
 ## Bitácora de commits
 
 **Obligatorio: cada commit en este repo se registra acá**, en la misma tanda de
@@ -262,3 +288,4 @@ dos repos.
 | 2026-09-05 | `feature/cambiar-contrasena` | Permitir cambiar la contraseña | `POST /user/change-password/` para cualquier autenticado, exigiendo la actual e invalidando los demás tokens; `must_change_password` en `User` (primera migración del proyecto), encendido al crear un colaborador y al regenerarle la contraseña. Incluye `SUPUESTOS.md`; verde 173/173 |
 | 2026-09-05 | `dev` | Merge de feature/cambiar-contrasena (`--no-ff`) | **SPEC-009 cerrada en backend**; suite completa verde 173/173 |
 | 2026-09-05 | `dev` | Poner al día la guía del repo | El contrato no listaba `POST /user/change-password/` ni la condición de `version` en el `PATCH`, y el modelo de datos no explicaba `must_change_password` ni por qué `last_login` no servía |
+| 2026-09-05 | `dev` | Exigir que este archivo se actualice al cerrar cada feature | La bitácora al día no garantiza el contexto al día: son cosas distintas y ya se habían separado. El protocolo pasa a nombrar qué secciones envejecen |
