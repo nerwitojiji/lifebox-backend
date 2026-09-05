@@ -155,6 +155,11 @@ class CourseDetailSerializer(serializers.ModelSerializer):
 
     full_name = campo_nombre_de_curso(required=False)
     duration_hours = serializers.IntegerField(min_value=1, required=False)
+    # SPEC-008 RN-1: editable, pero solo mientras nadie se haya inscrito. Ver
+    # validate_version() para la condición.
+    version = serializers.CharField(
+        max_length=20, required=False, validators=[validar_version]
+    )
     enrolled_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -169,7 +174,48 @@ class CourseDetailSerializer(serializers.ModelSerializer):
             "created_at",
             "enrolled_count",
         ]
-        read_only_fields = ["id", "version", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
+    def validate_version(self, valor):
+        """SPEC-008: corregir un tipeo no es lo mismo que publicar una versión.
+
+        La distinción no es «editar vs. versionar», sino si alguien ya se
+        inscribió: sin inscritos la versión es un dato del formulario; con
+        inscritos es parte de lo que esas personas cursaron, y cambiarla
+        reescribiría su historial.
+        """
+        curso = self.instance
+        if curso is None or valor == curso.version:
+            # RN-2: reenviar la misma versión no es un cambio y no puede fallar.
+            return valor
+
+        # RN-1: el conteo sale de la anotación que la vista ya trae; el criterio
+        # de «inscrito vigente» es el mismo que informa el panel.
+        inscritos = getattr(curso, "enrolled_count", 0)
+        if inscritos:
+            raise serializers.ValidationError(
+                f"Este curso ya tiene {inscritos} "
+                f"{'inscrito' if inscritos == 1 else 'inscritos'}, así que su "
+                "versión no se puede corregir. Publica una versión nueva."
+            )
+
+        # RN-4: mismo criterio que al publicar una versión (SPEC-007 RN-10).
+        ya_usada = (
+            Course.objects.filter(
+                organization=curso.organization,
+                show=True,
+                full_name=curso.full_name,
+                version=valor,
+            )
+            .exclude(pk=curso.pk)
+            .exists()
+        )
+        if ya_usada:
+            raise serializers.ValidationError(
+                "Ya existe una versión con ese número para este curso."
+            )
+
+        return valor
 
 
 class CourseDetailView(generics.RetrieveUpdateDestroyAPIView):

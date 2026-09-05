@@ -353,3 +353,38 @@ class CreateCollaboratorTests(APITestCase):
         self.assertEqual(collaborator.user.first_name, original["first_name"])
         self.assertEqual(collaborator.user.last_name, original["last_name"])
         self.assertEqual(collaborator.organization_id, original["organization_id"])
+
+    # -- SPEC-009: el aviso de cambiar la contraseña temporal -----------------
+
+    def test_el_colaborador_creado_debe_cambiar_su_contrasena(self):
+        """CA-10: RN-9 — nació con una contraseña que eligió el servidor y vio
+        el administrador; hay que avisarle."""
+        self.authenticate("admin.a@test.com")
+
+        response = self.client.post(
+            self.list_url,
+            {"first_name": "Nueva", "email": "nueva@test.com"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        usuario = User.objects.get(email="nueva@test.com")
+        self.assertTrue(usuario.must_change_password)
+
+    def test_regenerar_la_contrasena_vuelve_a_encender_el_aviso(self):
+        """CA-11: RN-9 — sin esto, el flag se apagaría para siempre después del
+        primer cambio y la persona no se enteraría de la temporal nueva."""
+        collaborator = self.existing_collaborator
+        collaborator.user.must_change_password = False
+        collaborator.user.save()
+        self.authenticate("admin.a@test.com")
+
+        response = self.client.post(self.reset_url(), format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        collaborator.user.refresh_from_db()
+        self.assertTrue(collaborator.user.must_change_password)
+
+    def test_el_admin_no_arrastra_el_aviso(self):
+        """CA-12: RN-9 — nunca recibió una contraseña temporal."""
+        self.assertFalse(self.admin_a.user.must_change_password)

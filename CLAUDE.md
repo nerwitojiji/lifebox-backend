@@ -63,6 +63,13 @@ de una `Organization`.
 collaborator)` — reasignar el mismo par revienta con `IntegrityError`, hay que
 manejarlo con `get_or_create` o validación en el serializer.
 
+`User.must_change_password` (SPEC-009) marca que la contraseña la eligió el
+servidor y la vio el administrador: se enciende al crear un colaborador y al
+regenerarle la contraseña, y se apaga cuando la persona pone la suya. Hizo falta
+el campo porque **`last_login` nunca se escribe** —el login usa `authenticate()`
++ Knox y no llama a `django.contrib.auth.login()`—, así que no distingue el
+primer ingreso del décimo.
+
 Todos los modelos heredan `utils.base_model.BaseAbstractModel`: `created_at`,
 `updated_at` y **`show`** (soft-delete). Dar de baja = `show=False`, nunca
 `.delete()`; y todo queryset de lectura filtra `show=True`.
@@ -128,14 +135,16 @@ Ya implementado:
 | GET | `/course/enrollments/` | `IsAdmin` — SPEC-004; panel agregado con `annotate(Count(..., filter=...))`, ordenado activos→inactivos |
 | GET | `/course/{id}/collaborators/` | `IsAdmin` — SPEC-005; inscritos vigentes de un curso, `-assigned_at` |
 | GET | `/course-collaborator/my-courses/` | `IsCollaborator` — SPEC-006; los cursos del colaborador del token, sin datos de otros |
-| GET/PATCH/DELETE | `/course/{id}/` | `IsAdmin` — SPEC-007; corregir, dar de baja (`is_active`) y eliminar (`show`). El `DELETE` responde `400` si el curso tiene inscritos vigentes |
+| GET/PATCH/DELETE | `/course/{id}/` | `IsAdmin` — SPEC-007; corregir, dar de baja (`is_active`) y eliminar (`show`). El `DELETE` responde `400` si el curso tiene inscritos vigentes. El `PATCH` acepta `version` **solo si el curso no tiene inscritos** (SPEC-008) |
 | POST | `/course/{id}/new-version/` | `IsAdmin` — SPEC-007; crea un curso nuevo con la versión pedida y deja el de origen inactivo, sin migrar inscritos |
 | DELETE | `/course/{id}/collaborators/{enrollment_id}/` | `IsAdmin` — SPEC-007; desinscribe (`show=False`); admite cursos inactivos |
 | DELETE | `/collaborator/{id}/` | `IsAdmin` — SPEC-007; da de baja: `Collaborator.show=False` **y** `user.is_active=False` en una transacción |
+| POST | `/user/change-password/` | autenticado — SPEC-009; exige la contraseña actual, invalida los demás tokens del usuario y apaga `must_change_password` |
 
-**Los cinco endpoints de SPEC-007 todavía no están declarados en
-`apiEndpoints.ts`**: son bonus, no parte del contrato original. Al implementar su
-interfaz hay que agregarlos ahí primero, que es la fuente de verdad de las rutas.
+Los endpoints de SPEC-007, SPEC-008 y SPEC-009 son **bonus**: no venían en el
+contrato original de `apiEndpoints.ts`, pero ya están declarados ahí y tienen
+interfaz. Al agregar uno nuevo, declararlo en ese archivo primero: es la fuente
+de verdad de las rutas.
 
 `GET /course/` incorpora `enrolled_count` desde SPEC-004. La definición de
 «inscrito vigente» (inscripción visible + colaborador y usuario disponibles) vive
@@ -186,6 +195,32 @@ la feature. Formato: sección `## SPEC-00X — <nombre>`, cada supuesto en negri
 como afirmación, el porqué a continuación y `→ archivo` cuando ayude a ubicarlo.
 El porqué es lo que importa: sin él la línea describe el código en vez de explicar
 la decisión.
+
+## Mantener este archivo al día — obligatorio
+
+**Toda feature o funcionalidad nueva termina actualizando este archivo, tenga
+spec o no**, en el mismo commit que el cambio.
+
+Actualizar la bitácora **no alcanza**: son cosas distintas. La bitácora registra
+*qué pasó*; las secciones de arriba describen *qué es verdad ahora*. Se puede
+tener la bitácora impecable y el contexto mintiendo — ya pasó acá: la tabla del
+contrato no listó `POST /user/change-password/` ni la condición de `version` en
+el `PATCH` durante varios commits.
+
+Lo que envejece en este archivo:
+
+- **La tabla del contrato de endpoints.** Ruta nueva, verbo nuevo o cambio de
+  comportamiento en una existente → fila nueva o fila corregida.
+- **El modelo de datos**, cuando se agrega un campo con reglas propias.
+- **El ruteo**, si se suma un prefijo o una vuelta poco obvia.
+- **Las «trampas»**, que son la memoria de las asimetrías deliberadas: si una
+  spec nueva crea o elimina una, se anota o se saca.
+
+**Regla práctica:** cualquier afirmación en presente —«no queda ningún endpoint
+pendiente»— es candidata a quedar falsa. Releerlas al cerrar cada feature.
+
+Una funcionalidad **sin spec** obliga igual, y más: no hay un documento aparte
+donde quede la decisión.
 
 ## Bitácora de commits
 
@@ -244,3 +279,13 @@ dos repos.
 | 2026-09-04 | `feature/correcciones` | Registrar los supuestos de SPEC-007 en la bitácora | La fila del commit de implementación no decía que llevaba `SUPUESTOS.md` adentro |
 | 2026-09-04 | `dev` | Merge de feature/correcciones (`--no-ff`) | **SPEC-007 cerrada en backend**: correcciones, versionado y bajas, todas por borrado lógico. 50 tests nuevos y suite completa verde 151/151, sin migraciones. Primer bonus de la entrega |
 | 2026-09-04 | `dev` | Agregar MEJORAS.md y completar la lista de endpoints | Entregable que faltaba: las ocho mejoras sobre el flujo pedido, cada una con el problema que resuelve. El README listaba endpoints solo hasta SPEC-002; ahora los agrupa por dominio e incluye los de SPEC-003 a SPEC-007 |
+| 2026-09-04 | `feature/corregir-version` | Incorporar SPEC-008 (corregir versión) al repositorio | SPEC-007 prohibía editar `version`, y el enunciado pide corregir el tipeo «decía 1.0 y en realidad es 2.0». La distinción que faltaba no es editar vs. versionar, sino si alguien ya se inscribió: sin inscritos la versión es un dato del formulario; con inscritos es parte de lo que esas personas cursaron. Acota SPEC-007 RN-4 y PA-11 sin anularlos |
+| 2026-09-04 | `feature/corregir-version` | Agregar tests de corrección de versión (SPEC-008) | 9 tests cubren CA-1..CA-10 en `test_edit_course.py`; rojo esperado (8 fallos): `version` es de solo lectura, así que el `PATCH` la ignora en silencio y responde `200` tanto donde debe corregir como donde debe rechazar |
+| 2026-09-04 | `feature/corregir-version` | Permitir corregir la versión de un curso sin inscritos | `version` sale de `read_only_fields` y gana un `validate_version()` que usa el `enrolled_count` ya anotado, sin consulta nueva. El test de SPEC-007 que fijaba la prohibición sin excepción se reescribe apuntando a la regla nueva. Incluye `SUPUESTOS.md`; verde 160/160, sin migraciones |
+| 2026-09-04 | `dev` | Merge de feature/corregir-version (`--no-ff`) | **SPEC-008 cerrada en backend**; suite completa verde 160/160 |
+| 2026-09-05 | `feature/cambiar-contrasena` | Incorporar SPEC-009 (cambiar contraseña) al repositorio | SPEC-002 dejó un extremo suelto: el colaborador no puede cambiar su contraseña de ninguna forma, y la temporal la conocen dos personas. Define `POST /user/change-password/`, el flag `must_change_password` y un aviso omitible que reaparece. Primera migración del proyecto: `last_login` existe pero nada lo escribe, así que no sirve como señal de primer ingreso |
+| 2026-09-05 | `feature/cambiar-contrasena` | Agregar tests de cambio de contraseña (SPEC-009) | 13 tests cubren CA-1..CA-14, repartidos entre el archivo nuevo, el de SPEC-002 (el flag al crear y al regenerar) y el de auth (el campo en login/me/verify-token); rojo esperado: 12 errores por la ruta y el campo inexistentes, más 1 fallo |
+| 2026-09-05 | `feature/cambiar-contrasena` | Permitir cambiar la contraseña | `POST /user/change-password/` para cualquier autenticado, exigiendo la actual e invalidando los demás tokens; `must_change_password` en `User` (primera migración del proyecto), encendido al crear un colaborador y al regenerarle la contraseña. Incluye `SUPUESTOS.md`; verde 173/173 |
+| 2026-09-05 | `dev` | Merge de feature/cambiar-contrasena (`--no-ff`) | **SPEC-009 cerrada en backend**; suite completa verde 173/173 |
+| 2026-09-05 | `dev` | Poner al día la guía del repo | El contrato no listaba `POST /user/change-password/` ni la condición de `version` en el `PATCH`, y el modelo de datos no explicaba `must_change_password` ni por qué `last_login` no servía |
+| 2026-09-05 | `dev` | Exigir que este archivo se actualice al cerrar cada feature | La bitácora al día no garantiza el contexto al día: son cosas distintas y ya se habían separado. El protocolo pasa a nombrar qué secciones envejecen |

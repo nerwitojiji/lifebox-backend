@@ -330,3 +330,92 @@ físicamente, un huérfano solo lo puede fabricar alguien con acceso al `/admin/
 Django, que es también la única puerta que queda para una purga real —por ejemplo,
 un derecho a supresión de la Ley 19.628— y que está fuera del alcance del uso
 normal a propósito.
+
+## SPEC-008 — Corregir la versión de un curso
+
+**La versión se puede corregir, pero solo mientras nadie se haya inscrito.**
+SPEC-007 la había hecho de solo lectura, con un buen argumento: la versión es
+parte de la identidad de lo que alguien cursó. Pero eso deja sin respuesta el
+caso que el enunciado nombra —«puse mal la versión: decía 1.0 y en realidad es
+2.0»—, que no es versionar sino corregir un tipeo: obligaba a publicar una
+versión nueva y dejaba dos cursos donde se quería uno corregido. La distinción
+que faltaba no era «editar vs. versionar», sino **si hay historial que
+proteger**. Con al menos un inscrito, la prohibición de SPEC-007 sigue intacta.
+→ `CourseDetailSerializer.validate_version()` en `apps/course/views.py`.
+
+**La condición es «sin inscritos vigentes», no «recién creado».** Una ventana de
+tiempo —editable los primeros N minutos— es arbitraria y falla justo cuando el
+error se descubre tarde. «Nadie se inscribió todavía» es la condición real que
+hace inofensivo el cambio, y ya venía calculada en el `enrolled_count` que anota
+el queryset: la regla no cuesta una consulta nueva.
+
+**Un curso cuyos inscritos fueron desinscritos o dados de baja vuelve a admitir
+la corrección.** Es consecuencia de reutilizar el criterio de «inscrito vigente»
+en vez de contar filas, y es lo correcto: si el contador dice 0, no hay a quién
+mentirle. El precio es que un administrador puede vaciar un curso a propósito
+para cambiarle la versión. **No se bloquea**: sería una defensa contra alguien
+que ya tiene permiso para hacer las dos operaciones por separado, y exigiría un
+rastro de auditoría que esta entrega no lleva. Queda como límite conocido, no
+como olvido.
+
+**Reenviar la misma versión nunca falla, ni siquiera con inscritos.** No es un
+cambio, y un cliente que hace `PATCH` con el objeto completo es un uso legítimo.
+Fallar ahí convertiría una regla de negocio en una trampa de integración.
+
+**`POST /course/{id}/new-version/` no se restringió a cursos con inscritos.**
+Publicar la 2.0 de un curso que nadie tomó es legítimo —el contenido cambió— así
+que ahí conviven dos caminos válidos: corregir el número o publicar una versión.
+Cuál corresponde lo sabe el administrador, no el sistema.
+
+## SPEC-009 — Cambiar la contraseña
+
+**Se exige la contraseña actual aunque la persona ya esté autenticada.** El token
+pudo quedar abierto en un equipo prestado; sin ese segundo factor, apropiarse de
+la cuenta sería trivial para quien lo tenga. El costo es un campo más en el
+formulario y vale la pena.
+
+**Al cambiarla se invalidan los demás tokens del usuario, y solo sobrevive el de
+la petición.** Esta es la razón de seguridad de toda la feature: la contraseña
+temporal la generó el servidor pero **la vio el administrador** y viajó por algún
+canal. Si alguien abrió sesión con ella, esa sesión muere en el momento del
+cambio. El token actual se conserva para no expulsar a quien acaba de hacer lo
+correcto.
+→ `ChangePasswordView.post()` en `apps/user/views.py`.
+
+**La fuerza de la contraseña la deciden los `AUTH_PASSWORD_VALIDATORS` que ya
+estaban en `settings.py`,** no una regla nueva. Ya gobernaban la contraseña
+temporal generada; que gobiernen también la elegida mantiene un solo criterio y
+evita que la validación del cambio y la de la generación se separen.
+
+**El endpoint sirve a cualquier usuario autenticado, administradores incluidos.**
+Opera sobre `request.user` y nunca sobre un identificador, así que restringirlo a
+colaboradores costaría código extra para excluir a quien más lo necesita: el admin
+entra con la contraseña del seeder y no tiene a nadie por encima a quien pedirle
+una regeneración.
+
+**El flag `must_change_password` vive en `User` y no en `Collaborator`.** La
+contraseña es del usuario, no del perfil. Ponerlo en el perfil obligaría a
+preguntar por el rol antes de saber si hay que avisar, y dejaría fuera a un
+administrador al que alguna vez se le entregue una temporal.
+
+**Hizo falta una migración porque `last_login` no sirve como señal de primer
+ingreso.** La columna existe —viene de `AbstractBaseUser`— pero **nada la
+escribe**: el login usa `authenticate()` y Knox, y nunca llama a
+`django.contrib.auth.login()`, que es quien la actualizaría. Se queda en `NULL`
+para siempre y no distingue el primer ingreso del décimo.
+
+**Regenerar la contraseña vuelve a encender el aviso.** Sin eso, el flag se
+apagaría para siempre después del primer cambio y la persona no se enteraría de
+que la temporal nueva también conviene cambiarla.
+
+**No hay recuperación autogestionada por correo, y es una decisión, no una
+omisión.** El proyecto no tiene ningún backend de correo configurado, y las tres
+salidas posibles son peores que el estado actual: un proveedor real exige
+credenciales que quien evalúe no tiene; el backend de consola deja el enlace en la
+terminal del servidor, donde no le llega a nadie; y mostrarlo en pantalla le
+regala el acceso a cualquiera que escriba un correo conocido. El camino real ya
+existe —lo regenera el administrador— y la pantalla de login lo explica.
+
+**No hay límite de intentos sobre `current_password`.** Es una defensa real contra
+fuerza bruta, pero exige almacenar intentos o configurar un throttle, y ninguno de
+los dos existe en el proyecto. Queda como límite conocido.
