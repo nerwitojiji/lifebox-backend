@@ -227,6 +227,19 @@ pendiente»— es candidata a quedar falsa. Releerlas al cerrar cada feature.
 Una funcionalidad **sin spec** obliga igual, y más: no hay un documento aparte
 donde quede la decisión.
 
+## SPEC-011 — propuesta pendiente de aprobación
+
+El usuario eligió **varios PDFs por curso** y una ficha para que el admin pueda
+revisar el mismo contenido que el colaborador. La propuesta vive en
+`docs/specs/SPEC-011-material-pdf.md`, con decisiones técnicas separadas en
+`docs/adr/ADR-001-material-pdf-local.md`.
+
+Propone agregar, reemplazar y quitar cada PDF, máximo 10 MiB por archivo, y
+lectura autenticada dentro del curso o inscripción. La nueva versión conserva
+los PDFs de origen y empieza con su propia lista vacía. **Aún no hay modelo,
+migración ni endpoints de material implementados.** La tabla actual de la API
+sigue describiendo lo que está construido; el contrato propuesto está en el spec.
+
 ## Bitácora de commits
 
 **Obligatorio: cada commit en este repo se registra acá**, en la misma tanda de
@@ -305,3 +318,4 @@ dos repos.
 | 2026-09-05 | `dev` | Anotar el merge de la Enmienda 1 en la bitácora | La fila del merge, que el propio merge no puede contener |
 | 2026-09-05 | `feature/iniciales-de-curso` | Reflejar la Enmienda 2 de SPEC-010 en el contexto del backend | Espejo del spec: iniciales locales y ficha compacta en el frontend; API y modelo sin cambios. Material pendiente para SPEC-011 |
 | 2026-09-05 | `dev` | Merge de feature/iniciales-de-curso | Enmienda 2 de SPEC-010 integrada con `--no-ff`: iniciales locales, ficha compacta y material reservado para SPEC-011 |
+| 2026-09-05 | `feature/material-pdf` | Proponer SPEC-011 de material PDF y ficha compartida | Spec de nueve artículos y ADR: varios PDFs por curso, gestión individual del admin y ficha/visor compartidos. Propuesta pendiente de aprobación; sin cambios de implementación |
