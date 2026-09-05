@@ -13,18 +13,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 SPEC-001 a SPEC-011 implementadas. La última suite completa pasó **213 tests**,
 28 de material PDF; incluye pruebas de API e integración con permisos, base de
 datos y archivos, no solo tests unitarios. La migración `course/0002_coursematerial`
-está aplicada en el entorno local. El código de SPEC-011 se publicó en
-`origin/dev` mediante `3d12625`; este cierre de contexto aún no está pusheado.
-`main` local permanece en SPEC-009, pendiente de la integración para la entrega.
+está aplicada en el entorno local. **La entrega está publicada**: `dev` y `main`
+están al día en `origin`, con SPEC-001 a SPEC-011 y el pulido del frontend
+integrados. Antes de esta publicación, `main` llevaba desde SPEC-009 sin
+actualizarse.
 
 El E2E está mantenido en el repo frontend: `npm run test:e2e`, guía
 `lifebox-frontend/docs/E2E.md`. Su helper inicia esta API real en 8100, con settings
 cargados de `academy.settings` y overrides exclusivos del proceso de prueba para
 SQLite, MEDIA_ROOT, hosts y CORS. Aplica migraciones y prepara al admin; el resto
 se crea por la interfaz. No usa la base ni los archivos del entorno habitual.
-El E2E pasó dos repeticiones consecutivas; no requiere modificar ni levantar
-manualmente el backend en 8000. Su código está en `dev` local del frontend y aún
-no está publicado. No hay trabajo funcional activo al cierre de esta sesión.
+No requiere modificar ni levantar manualmente el backend en 8000.
+
+Desde el pulido del frontend son **dos escenarios**: `curso-pdf.spec.ts`, el flujo
+principal en escritorio, y `movil.spec.ts`, el mismo recorrido esencial en un
+viewport de 390 px. Los dos pasan. Antes había uno solo, así que un «2 passed» de
+aquella época significaba haberlo repetido, no dos pruebas distintas.
+
+Nada de esto cambia el backend: el pulido fue exclusivamente de interfaz. La API,
+los modelos y la suite de 213 tests quedaron intactos.
 
 ## Comandos
 
@@ -355,3 +362,6 @@ dos repos.
 | 2026-09-05 | `feature/material-pdf` | Conservar los PDFs de ejemplo como archivos binarios | Marca *.pdf como binary para impedir que autocrlf cambie los offsets internos al clonar en Windows; verifica los bytes y páginas guardados en Git. |
 | 2026-09-05 | `dev` | Merge de feature/material-pdf | SPEC-011 cerrada: varios PDFs privados, migración aplicada y 213 tests verdes. Integración local con --no-ff; sin push. |
 | 2026-09-05 | `dev` | Actualizar contexto de cierre y verificación E2E | Registra los 213 tests, el E2E mantenido en el frontend, su aislamiento y el estado de publicación; no cambia código ni configuración. |
+| 2026-09-05 | `dev` | Agregar los 5 pasos de demostración al README | El entregable pide un recorrido corto y el README saltaba de los usuarios de prueba a los endpoints; renombra «Probar material de curso» para que exista el ancla que lo referencia |
+| 2026-09-05 | `dev` | Poner el contexto al día para la entrega | Afirmaba que `main` seguía en SPEC-009 y que el E2E no estaba publicado; registra además que el E2E pasó a ser dos escenarios y que el pulido del frontend no tocó el backend |
+| 2026-09-05 | `main` | Merge de dev a main — entrega final | Integra SPEC-010, SPEC-011, el E2E y el pulido del frontend. Suite completa verde antes de publicar |
