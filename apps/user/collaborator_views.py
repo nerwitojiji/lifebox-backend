@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.db import transaction
 from django.utils.crypto import get_random_string
 from knox.auth import TokenAuthentication
@@ -16,6 +17,8 @@ from utils.custom_permissions import IsAdmin
 
 PASSWORD_ALPHABET = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 PASSWORD_LENGTH = 12
+DEFAULT_PAGE_SIZE = 20
+MAX_PAGE_SIZE = 100
 
 
 def generate_temporary_password(user=None):
@@ -23,6 +26,14 @@ def generate_temporary_password(user=None):
         password = get_random_string(PASSWORD_LENGTH, PASSWORD_ALPHABET)
         if user is None or not user.check_password(password):
             return password
+
+
+def _positive_int(value, default):
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed >= 1 else default
 
 
 class CollaboratorListSerializer(serializers.ModelSerializer):
@@ -96,10 +107,49 @@ class CollaboratorListView(ListCreateAPIView):
         return self.request.user.admin_profile.organization
 
     def get_queryset(self):
-        return Collaborator.objects.filter(
+        queryset = Collaborator.objects.filter(
             organization=self.get_organization(),
             show=True,
-        ).select_related("user")
+        ).select_related("user").order_by(
+            "user__first_name",
+            "user__last_name",
+            "id",
+        )
+
+        q = (self.request.query_params.get("q") or "").strip()
+        if q:
+            queryset = queryset.filter(
+                Q(user__first_name__icontains=q)
+                | Q(user__last_name__icontains=q)
+                | Q(user__email__icontains=q)
+            )
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        total_items = queryset.count()
+        page = _positive_int(request.query_params.get("page"), 1)
+        page_size = min(
+            _positive_int(request.query_params.get("page_size"), DEFAULT_PAGE_SIZE),
+            MAX_PAGE_SIZE,
+        )
+        total_pages = (total_items + page_size - 1) // page_size if total_items else 0
+        offset = (page - 1) * page_size
+        page_qs = queryset[offset : offset + page_size]
+        serializer = self.get_serializer(page_qs, many=True)
+        return Response(
+            {
+                "items": serializer.data,
+                "pagination": {
+                    "page": page,
+                    "page_size": page_size,
+                    "total_items": total_items,
+                    "total_pages": total_pages,
+                    "has_next": page < total_pages,
+                    "has_previous": page > 1 and total_pages > 0,
+                },
+            }
+        )
 
     def perform_create(self, serializer):
         serializer.save(organization=self.get_organization())
