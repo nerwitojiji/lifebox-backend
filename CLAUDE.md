@@ -45,6 +45,9 @@ make makemigrations # tras tocar cualquier models.py
 make seed           # python seeder.py — org demo + 1 admin + 2 colaboradores (idempotente)
 make runserver      # http://127.0.0.1:8000
 make test           # python manage.py test
+
+# Seed masivo de colaboradores (bulk, para escala / QA)
+python manage.py seed_bulk --users 50   # bulkN@lifebox.test / password123
 ```
 
 Correr un subconjunto de tests (el `Makefile` no lo cubre, usar `manage.py` directo):
@@ -57,6 +60,8 @@ python manage.py test apps.user.tests.test_auth.AuthTests.test_login_admin_succe
 
 En Windows sin `make`, cada target es un one-liner equivalente sobre `manage.py`
 (ver `Makefile`); `make seed` es `python seeder.py`.
+`seed_bulk` solo crea colaboradores (`User` + `Collaborator`) con `bulk_create`;
+repite sin pisar: continúa desde el siguiente `bulkN@lifebox.test`.
 
 ## Arquitectura
 
@@ -365,3 +370,4 @@ dos repos.
 | 2026-09-05 | `dev` | Agregar los 5 pasos de demostración al README | El entregable pide un recorrido corto y el README saltaba de los usuarios de prueba a los endpoints; renombra «Probar material de curso» para que exista el ancla que lo referencia |
 | 2026-09-05 | `dev` | Poner el contexto al día para la entrega | Afirmaba que `main` seguía en SPEC-009 y que el E2E no estaba publicado; registra además que el E2E pasó a ser dos escenarios y que el pulido del frontend no tocó el backend |
 | 2026-09-05 | `main` | Merge de dev a main — entrega final | Integra SPEC-010, SPEC-011, el E2E y el pulido del frontend. Suite completa verde antes de publicar |
+| 2026-09-10 | `feat/tech-review` | feat(user): ✨ add bulk collaborator seed command | `seed_bulk --users N`: colaboradores `bulkN@lifebox.test` vía `bulk_create`, password compartido, índice incremental; documentado en Comandos |
