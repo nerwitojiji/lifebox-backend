@@ -95,7 +95,8 @@ class DeactivateCollaboratorTests(APITestCase):
 
         listado = self.client.get(reverse("collaborator-list"))
         self.assertNotIn(
-            self.collaborator_a.pk, [fila["id"] for fila in listado.data]
+            self.collaborator_a.pk,
+            [fila["id"] for fila in listado.data["items"]],
         )
 
         detalle = self.client.get(

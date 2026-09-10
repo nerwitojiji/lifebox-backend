@@ -120,7 +120,7 @@ class CreateCollaboratorTests(APITestCase):
         response = self.client.get(self.list_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        for item in response.data:
+        for item in response.data["items"]:
             self.assertNotIn("temporary_password", item)
             self.assertNotIn("password", item)
 
@@ -239,7 +239,10 @@ class CreateCollaboratorTests(APITestCase):
         response = self.client.get(self.list_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("ana@test.com", [item["email"] for item in response.data])
+        self.assertIn(
+            "ana@test.com",
+            [item["email"] for item in response.data["items"]],
+        )
 
     def test_colaborador_no_es_visible_para_otra_organizacion(self):
         self.authenticate("admin.a@test.com")
@@ -252,7 +255,10 @@ class CreateCollaboratorTests(APITestCase):
         response = self.client.get(self.list_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertNotIn("ana@test.com", [item["email"] for item in response.data])
+        self.assertNotIn(
+            "ana@test.com",
+            [item["email"] for item in response.data["items"]],
+        )
 
     def test_admin_puede_regenerar_password(self):
         self.authenticate("admin.a@test.com")
@@ -330,7 +336,7 @@ class CreateCollaboratorTests(APITestCase):
         response = self.client.get(self.list_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        for item in response.data:
+        for item in response.data["items"]:
             self.assertNotIn("temporary_password", item)
             self.assertNotIn("password", item)
 
