@@ -157,7 +157,7 @@ Ya implementado:
 | POST | `/user/verify-token/` | token (la llama el middleware del front en **cada** navegación) |
 | GET | `/user/me/` | token |
 | GET | `/course/` | `IsAdmin` |
-| GET | `/collaborator/` | `IsAdmin` |
+| GET | `/collaborator/` | `IsAdmin` — `{ items, pagination }`; `q` (nombre/apellido/correo), `page`, `page_size` (default 20, tope 100) |
 | POST | `/course/` | `IsAdmin` — SPEC-001; organización derivada del servidor |
 | POST | `/collaborator/` | `IsAdmin` — SPEC-002; crea `User` + `Collaborator` atómicamente y entrega `temporary_password` solo en el `201` |
 | POST | `/collaborator/{id}/reset-password/` | `IsAdmin` — SPEC-002; regenera la contraseña temporal dentro del tenant, sin body |
@@ -371,3 +371,6 @@ dos repos.
 | 2026-09-05 | `dev` | Poner el contexto al día para la entrega | Afirmaba que `main` seguía en SPEC-009 y que el E2E no estaba publicado; registra además que el E2E pasó a ser dos escenarios y que el pulido del frontend no tocó el backend |
 | 2026-09-05 | `main` | Merge de dev a main — entrega final | Integra SPEC-010, SPEC-011, el E2E y el pulido del frontend. Suite completa verde antes de publicar |
 | 2026-09-10 | `feat/tech-review` | feat(user): ✨ add bulk collaborator seed command | `seed_bulk --users N`: colaboradores `bulkN@lifebox.test` vía `bulk_create`, password compartido, índice incremental; documentado en Comandos |
+| 2026-09-10 | `feat/tech-review` | test(user): ✅ expect paginated collaborator list and search | Nuevo `test_list_collaborators` (shape, `q`, tenant, páginas, tope); asserts de listado existentes leen `response.data["items"]` |
+| 2026-09-10 | `feat/tech-review` | feat(user)!: ✨ paginate collaborator list with text search | `GET /collaborator/` pasa a `{ items, pagination }` con `q`/`page`/`page_size`; rompe consumidores que esperaban un array plano |
+| 2026-09-10 | `feat/tech-review` | docs: 📝 document collaborator list pagination contract | Contrato y supuestos: excepción de paginación solo en colaboradores |

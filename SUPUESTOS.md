@@ -17,11 +17,19 @@ organizaciones se hace valer filtrando el queryset, nunca confiando en el front.
 listados filtran `show=True`. Dar de baja será marcar `show=False`; no se borran
 filas.
 
-**Los listados no están paginados.** `GET /course/` y `GET /collaborator/`
-devuelven un array plano, no un objeto `{count, results}`. No se configuró
-`DEFAULT_PAGINATION_CLASS` porque el volumen esperado es de decenas de registros,
-y el frontend tipa las respuestas como arreglos. Si el volumen creciera, agregar
-paginación es un cambio que rompe el contrato con el front.
+**Los listados no están paginados, con una excepción.** `GET /course/` y el resto
+siguen devolviendo un array plano: no hay `DEFAULT_PAGINATION_CLASS` porque el
+volumen esperado era de decenas de registros y el frontend tipaba respuestas
+como arreglos. **`GET /collaborator/` es la excepción**: responde
+`{ items, pagination }` y acepta `q`, `page` y `page_size` para soportar
+búsqueda y escala (p. ej. tras `seed_bulk`). El resto de listados no heredan
+ese contrato.
+
+**La búsqueda de colaboradores filtra por nombre, apellido o correo.** El
+parámetro `q` aplica `icontains` con OR sobre `user__first_name`,
+`user__last_name` y `user__email`. Vacío o solo espacios = sin filtro de texto.
+La paginación default es `page=1`, `page_size=20`, con tope `100`.
+→ `CollaboratorListView` en `apps/user/collaborator_views.py`.
 
 **Los mensajes de error los traduce DRF.** Con `LANGUAGE_CODE = "es-cl"` y
 `USE_I18N = True`, los errores de validación salen en español sin trabajo extra.
